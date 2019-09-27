@@ -220,6 +220,12 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
+    // Setup of client socket
+
+    printf("Client port: ");
+    int clientPort << std::cin;
+    clientSock = open_socket(atoi(4099));
+
     // Setup socket for server to listen to
 
     listenSock = open_socket(atoi(argv[1])); 
