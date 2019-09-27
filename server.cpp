@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
 
     printf("Client port: ");
     int clientPort << std::cin;
-    clientSock = open_socket(atoi(4099));
+    clientSock = open_socket(clientPort);
 
     // Setup socket for server to listen to
 
