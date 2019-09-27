@@ -28,6 +28,10 @@
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
 
+#ifndef SOCK_NONBLOCK
+#include <fcntl.h>
+#endif
+
 // Simple class for handling connections from clients.
 //
 // Client(int socket) - socket to send/receive traffic from client.
@@ -64,13 +68,29 @@ int open_socket(int portno)
    // Create socket for connection. Set to be non-blocking, so recv will
    // return immediately if there isn't anything waiting to be read.
 
-   if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
-   {
-      perror("Failed to open socket");
-      return(-1);
-   }
+    #ifndef SOCK_NONBLOCK
+        if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+        {
+            perror("Failed to open socket");
+            return(-1);
+        }
 
-   // Turn on SO_REUSEADDR to allow socket to be quickly reused after 
+        int flags = fcntl(sock, F_GETFL, 0);
+
+        if(fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
+        {
+            perror("Failed to set O_NONBLOCK");
+        }
+    #else
+        if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK , IPPROTO_TCP)) < 0)
+          {
+             perror("Failed to open socket");
+             return(-1);
+          }
+    #endif
+
+
+    // Turn on SO_REUSEADDR to allow socket to be quickly reused after
    // program exit.
 
    if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
@@ -197,7 +217,7 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
   }
-
+  return 0;
 
 }
 
@@ -223,7 +243,8 @@ int main(int argc, char* argv[])
     // Setup of client socket
 
     printf("Client port: ");
-    int clientPort << std::cin;
+    int clientPort;
+    std::cin >> clientPort;
     clientSock = open_socket(clientPort);
 
     // Setup socket for server to listen to
