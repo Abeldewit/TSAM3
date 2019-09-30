@@ -158,69 +158,80 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   while(stream >> token)
       tokens.push_back(token);
 
+  if((tokens[0].compare("PASS") == 0) && tokens.size() == 2) {
+      if(tokens[1].compare("100!") == 0) {
+          mainClient = clientSocket;
+      }
+  }
 
-//  if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
-//  {
-//     clients[clientSocket]->name = tokens[1];
-//  }
-//  else if(tokens[0].compare("LEAVE") == 0)
-//  {
-//      // Close the socket, and leave the socket handling
-//      // code to deal with tidying up clients etc. when
-//      // select() detects the OS has torn down the connection.
-//
-//      closeClient(clientSocket, openSockets, maxfds);
-//  }
-//  else if(tokens[0].compare("WHO") == 0)
-//  {
-//     std::cout << "Who is logged on" << std::endl;
-//     std::string msg;
-//
-//     for(auto const& names : clients)
-//     {
-//        msg += names.second->name + ",";
-//
-//     }
-//     // Reducing the msg length by 1 loses the excess "," - which
-//     // granted is totally cheating.
-//     send(clientSocket, msg.c_str(), msg.length()-1, 0);
-//
-//  }
-//  // This is slightly fragile, since it's relying on the order
-//  // of evaluation of the if statement.
-//  else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
-//  {
-//      std::string msg;
-//      for(auto i = tokens.begin()+2;i != tokens.end();i++)
-//      {
-//          msg += *i + " ";
-//      }
-//
-//      for(auto const& pair : clients)
-//      {
-//          send(pair.second->sock, msg.c_str(), msg.length(),0);
-//      }
-//  }
-//  else if(tokens[0].compare("MSG") == 0)
-//  {
-//      for(auto const& pair : clients)
-//      {
-//          if(pair.second->name.compare(tokens[1]) == 0)
-//          {
-//              std::string msg;
-//              for(auto i = tokens.begin()+2;i != tokens.end();i++)
-//              {
-//                  msg += *i + " ";
-//              }
-//              send(pair.second->sock, msg.c_str(), msg.length(),0);
-//          }
-//      }
-//  }
-//  else
-//  {
-//      std::cout << "Unknown command from client:" << buffer << std::endl;
-//  }
-     
+  if ( clientSocket == mainClient ) {
+      // Do our client stuff
+      printf( "Client!!!" );
+  } else {
+      // Do server stuff
+
+      if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
+      {
+         clients[clientSocket]->name = tokens[1];
+      }
+      else if(tokens[0].compare("LEAVE") == 0)
+      {
+          // Close the socket, and leave the socket handling
+          // code to deal with tidying up clients etc. when
+          // select() detects the OS has torn down the connection.
+
+          closeClient(clientSocket, openSockets, maxfds);
+      }
+      else if(tokens[0].compare("WHO") == 0)
+      {
+         std::cout << "Who is logged on" << std::endl;
+         std::string msg;
+
+         for(auto const& names : clients)
+         {
+            msg += names.second->name + ",";
+
+         }
+         // Reducing the msg length by 1 loses the excess "," - which
+         // granted is totally cheating.
+         send(clientSocket, msg.c_str(), msg.length()-1, 0);
+
+      }
+      // This is slightly fragile, since it's relying on the order
+      // of evaluation of the if statement.
+      else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
+      {
+          std::string msg;
+          for(auto i = tokens.begin()+2;i != tokens.end();i++)
+          {
+              msg += *i + " ";
+          }
+
+          for(auto const& pair : clients)
+          {
+              send(pair.second->sock, msg.c_str(), msg.length(),0);
+          }
+      }
+      else if(tokens[0].compare("MSG") == 0)
+      {
+          for(auto const& pair : clients)
+          {
+              if(pair.second->name.compare(tokens[1]) == 0)
+              {
+                  std::string msg;
+                  for(auto i = tokens.begin()+2;i != tokens.end();i++)
+                  {
+                      msg += *i + " ";
+                  }
+                  send(pair.second->sock, msg.c_str(), msg.length(),0);
+              }
+          }
+      }
+      else
+      {
+          std::cout << "Unknown command from client:" << buffer << std::endl;
+      }
+  }
 }
 
 int main(int argc, char* argv[])
