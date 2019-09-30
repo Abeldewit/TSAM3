@@ -58,7 +58,7 @@ class Client
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
-Client* mainClient;
+int mainClient;
 
 // Open socket for specified port.
 //
