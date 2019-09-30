@@ -26,11 +26,15 @@
 #include <thread>
 #include <map>
 
-#define BACKLOG  5          // Allowed length of queue of waiting connections
+#include <unistd.h>
 
+// fix SOCK_NONBLOCK for OSX
 #ifndef SOCK_NONBLOCK
 #include <fcntl.h>
+#define SOCK_NONBLOCK O_NONBLOCK
 #endif
+
+#define BACKLOG  5          // Allowed length of queue of waiting connections
 
 // Simple class for handling connections from clients.
 //
@@ -67,30 +71,21 @@ int open_socket(int portno)
 
    // Create socket for connection. Set to be non-blocking, so recv will
    // return immediately if there isn't anything waiting to be read.
+#ifdef __APPLE__     
+   if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+   {
+      perror("Failed to open socket");
+      return(-1);
+   }
+#else
+   if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)) < 0)
+   {
+      perror("Failed to open socket");
+      return(-1);
+   }
+#endif
 
-    #ifndef SOCK_NONBLOCK
-        if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        {
-            perror("Failed to open socket");
-            return(-1);
-        }
-
-        int flags = fcntl(sock, F_GETFL, 0);
-
-        if(fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
-        {
-            perror("Failed to set O_NONBLOCK");
-        }
-    #else
-        if((sock = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK , IPPROTO_TCP)) < 0)
-          {
-             perror("Failed to open socket");
-             return(-1);
-          }
-    #endif
-
-
-    // Turn on SO_REUSEADDR to allow socket to be quickly reused after
+   // Turn on SO_REUSEADDR to allow socket to be quickly reused after 
    // program exit.
 
    if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &set, sizeof(set)) < 0)
@@ -98,6 +93,12 @@ int open_socket(int portno)
       perror("Failed to set SO_REUSEADDR:");
    }
 
+#ifdef __APPLE__     
+   if(setsockopt(sock, SOL_SOCKET, SOCK_NONBLOCK, &set, sizeof(set)) < 0)
+   {
+      perror("Failed to set SOCK_NOBBLOCK");
+   }
+#endif
    memset(&sk_addr, 0, sizeof(sk_addr));
 
    sk_addr.sin_family      = AF_INET;
@@ -144,7 +145,7 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 
 // Process command from client on the server
 
-int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, 
+void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, 
                   char *buffer) 
 {
   std::vector<std::string> tokens;
@@ -217,8 +218,7 @@ int clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   {
       std::cout << "Unknown command from client:" << buffer << std::endl;
   }
-  return 0;
-
+     
 }
 
 int main(int argc, char* argv[])
@@ -239,13 +239,6 @@ int main(int argc, char* argv[])
         printf("Usage: chat_server <ip port>\n");
         exit(0);
     }
-
-    // Setup of client socket
-
-    printf("Client port: ");
-    int clientPort;
-    std::cin >> clientPort;
-    clientSock = open_socket(clientPort);
 
     // Setup socket for server to listen to
 
