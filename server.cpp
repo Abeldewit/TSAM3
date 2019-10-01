@@ -20,7 +20,6 @@
 #include <algorithm>
 #include <map>
 #include <vector>
-
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -43,12 +42,21 @@ class Client
 {
   public:
     int sock;              // socket of client connection
-    std::string name;           // Limit length of name of client's user
+    std::string name;      // Limit length of name of client's user
+    std::string GROUP_ID;  // Group ID of the server
+    std::string HOST_IP;   // IP address of client
+    int SERVPORT;          // Port of the server 
 
     Client(int socket) : sock(socket){} 
 
     ~Client(){}            // Virtual destructor defined for base class
 };
+
+
+
+/// Global var - Added, string ServerID <-- ID our server?
+std::string serverID = "V_GROUP_100";
+
 
 // Note: map is not necessarily the most efficient method to use here,
 // especially for a server with large numbers of simulataneous connections,
@@ -58,6 +66,7 @@ class Client
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
+
 int mainClient;
 
 // Open socket for specified port.
@@ -144,6 +153,38 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
      FD_CLR(clientSocket, openSockets);
 }
 
+
+void ListServers(int sock, std::string group_id, int port)
+{   
+    char buffer[INET_ADDRSTRLEN] = "";
+
+    struct sockaddr_in sin;
+    unsigned int addrlen = sizeof(sin);
+    sin.sin_family = AF_INET;
+    unsigned int PortNo = 0;
+
+    getsockname(sock, (struct sockaddr *)&sin, &addrlen);
+    sin.sin_port = htons(PortNo);
+    
+    socklen_t len = sizeof(sin);
+    if (getpeername(sock, (struct sockaddr *)&sin, &len) != 0) 
+    {
+                perror("getpeername");
+    } 
+    else 
+    {
+                inet_ntop(AF_INET, &sin.sin_addr, buffer, sizeof buffer);
+    }
+
+
+    std::cout << group_id << "," <<  buffer << "," << PortNo << std::endl;
+
+
+   
+}
+
+
+
 // Process command from client on the server
 
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, 
@@ -226,6 +267,32 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
                   send(pair.second->sock, msg.c_str(), msg.length(),0);
               }
           }
+      }
+      else if(tokens[0].compare("LISTSERVERS") == 0)
+      {   
+            std::string ServerList;
+          /* LISTSERVERS,<FROM GROUP ID> Reply with servers response (below)
+                SERVERS
+                Provide a list of directly connected - i.e. 1-hop, servers to
+                this server.
+                The first IP address in the list should be the IP of the con-
+                nected server.
+                Servers should be specified as GROUP ID, the HOST IP,
+                and PORT they will accept connections on, comma sepa-
+                rated within the message, each server separated by ;
+                eg. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
+            */  std::string group_id;
+                int portNo = 4000;
+                for(auto& elem : clients)
+                {   
+                    //ServerList = elem.second;
+                  ///  group_id = elem.at('GROUP_ID');
+                    std::cout << "," << group_id;
+                    ListServers(clientSocket, group_id, portNo);
+
+                }
+
+    
       }
       else
       {
