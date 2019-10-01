@@ -195,12 +195,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
     } else if( (tokens[0].compare("LISTSERVERS")) && tokens.size() == 2) {
         // We list all the servers that our own server is connected to
-        for(auto& elem : clients)
-        {
-
-            std::cout << "," << group_id;
-            ListServers(clientSocket, group_id, portNo);
-        }
+        
     }
 }
 
