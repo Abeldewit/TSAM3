@@ -362,7 +362,8 @@ int main(int argc, char* argv[])
             {
                clientSock = accept(listenSock, (struct sockaddr *)&client,
                                    &clientLen);
-
+               std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT";
+               send(clientSock, msg.c_str(), msg.length());
                // Add new client to the list of open sockets
                FD_SET(clientSock, &openSockets);
 
