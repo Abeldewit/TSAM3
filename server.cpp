@@ -185,11 +185,28 @@ void ListServers(int sock, std::string group_id, int port)
    
 }
 
+// When our client is logged in these commands will be active
+void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
+    if( (tokens[0].compare("GETMSG")) && tokens.size() == 2) {
+        // We try to receive a message from someone
 
+    } else if( (tokens[0].compare("SENDMSG")) && tokens.size() == 3) {
+        // We send a message to someone
+
+    } else if( (tokens[0].compare("LISTSERVERS")) && tokens.size() == 2) {
+        // We list all the servers that our own server is connected to
+        for(auto& elem : clients)
+        {
+
+            std::cout << "," << group_id;
+            ListServers(clientSocket, group_id, portNo);
+        }
+    }
+}
 
 // Process command from client on the server
 
-void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, 
+void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
                   char *buffer) 
 {
   std::vector<std::string> tokens;
@@ -204,18 +221,22 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   if((tokens[0].compare("PASS") == 0) && tokens.size() == 2) {
       if(tokens[1].compare("100!") == 0) {
           mainClient = clientSocket;
+          std::string msg = "Welcome master, send me your commands";
+          send(clientSocket, msg.c_str(), msg.length(), 0);
       }
   }
 
   if ( clientSocket == mainClient ) {
       // Do our client stuff
-      printf( "Client!!!" );
+      clientCommand(clientSocket, openSockets, maxfds, tokens);
   } else {
       // Do server stuff
-
       if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
       {
          clients[clientSocket]->name = tokens[1];
+         std::string msg = "Hi ";
+         msg += tokens[2];
+         send(clientSocket, msg.c_str(), msg.length(),0);
       }
       else if(tokens[0].compare("LEAVE") == 0)
       {
@@ -401,7 +422,7 @@ int main(int argc, char* argv[])
                       else
                       {
                           std::cout << buffer << std::endl;
-                          clientCommand(client->sock, &openSockets, &maxfds, 
+                          runCommand(client->sock, &openSockets, &maxfds,
                                         buffer);
                       }
                   }
