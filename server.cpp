@@ -195,7 +195,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
     } else if( (tokens[0].compare("LISTSERVERS")) && tokens.size() == 2) {
         // We list all the servers that our own server is connected to
-        
+
     }
 }
 
@@ -230,7 +230,7 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       {
          clients[clientSocket]->name = tokens[1];
          std::string msg = "Hi ";
-         msg += tokens[2];
+         msg += tokens[1];
          send(clientSocket, msg.c_str(), msg.length(),0);
       }
       else if(tokens[0].compare("LEAVE") == 0)
