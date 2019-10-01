@@ -66,8 +66,7 @@ std::string serverID = "V_GROUP_100";
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
-
-int mainClient;
+int mainClient = 0;
 
 // Open socket for specified port.
 //
@@ -135,6 +134,9 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 {
      // Remove client from the clients list
      clients.erase(clientSocket);
+     if (clientSocket == mainClient) {
+         mainClient = 0;
+     }
 
      // If this client's socket is maxfds then the next lowest
      // one has to be determined. Socket fd's can be reused by the Kernel,

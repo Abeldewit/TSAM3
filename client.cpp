@@ -38,11 +38,12 @@ void listenServer(int serverSocket)
     {
        memset(buffer, 0, sizeof(buffer));
        nread = read(serverSocket, buffer, sizeof(buffer));
+       printf("%d", nread);
 
        if(nread < 0)                      // Server has dropped us
        {
           printf("Over and Out\n");
-          exit(0);
+          //exit(0);
        }
        else if(nread > 0)
        {
