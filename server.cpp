@@ -46,7 +46,10 @@ class Client
     std::string name;      // Limit length of name of client's user
     std::string GROUP_ID;  // Group ID of the server
     std::string HOST_IP;   // IP address of client*/
-    int SERVPORT;          // Port of the server 
+    int SERVPORT;          // Port of the server
+
+    int attempts = 0;
+    std::chrono::seconds timeout;
 
     Client(int socket) : sock(socket){} 
 
@@ -137,9 +140,11 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 {
      // Remove client from the clients list
      clients.erase(clientSocket);
+     // If it is our own client and not a server then we remove that from memory
      if (clientSocket == mainClient) {
          mainClient = 0;
      }
+
 
      // If this client's socket is maxfds then the next lowest
      // one has to be determined. Socket fd's can be reused by the Kernel,
@@ -154,7 +159,6 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
      }
 
      // And remove from the list of open sockets.
-
      FD_CLR(clientSocket, openSockets);
 }
 /*
@@ -220,7 +224,11 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
     } else if( (tokens[0].compare("LISTSERVERS")) && tokens.size() == 2) {
         // We list all the servers that our own server is connected to
 
+    } else if( (tokens[0].compare("CONNECTTO")) && tokens.size() == 3) {
+        // We force the server to connect to another server
+
     }
+
 }
 
 // Process command from client on the server
@@ -253,7 +261,7 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
       {
          clients[clientSocket]->name = tokens[1];
-         std::string msg = "Hi ";
+         std::string msg = "Connected ";
          msg += tokens[1];
          send(clientSocket, msg.c_str(), msg.length(),0);
       }
@@ -355,6 +363,19 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
 }
 
+void sendCommand(int clientSocket, std::string buffer) {
+
+    // I used to be an adventurer, just like you, but then I took C++ to the knee
+    // I have no clue how to add the SOI and EOI
+    
+    char finalsend[sizeof(buffer) + 2];
+    strcpy(finalsend + 1, buffer.c_str());
+    finalsend[0] = 0x01;
+    finalsend[sizeof(buffer) - 1] = 0x04;
+    //send(clientSocket, buffer, sizeof(buffer), 0);
+    std::cout << finalsend << std::endl;
+}
+
 int main(int argc, char* argv[])
 {
     bool finished;
@@ -414,7 +435,7 @@ int main(int argc, char* argv[])
             {
                clientSock = accept(listenSock, (struct sockaddr *)&client,
                                    &clientLen);
-               std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT";
+               std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT\n";
                send(clientSock, msg.c_str(), msg.length(),0);
                // Add new client to the list of open sockets
                FD_SET(clientSock, &openSockets);
@@ -437,24 +458,34 @@ int main(int argc, char* argv[])
                {
                   Client *client = pair.second;
 
-                  if(FD_ISSET(client->sock, &readSockets))
-                  {
+                  if(FD_ISSET(client->sock, &readSockets)) {
                       // recv() == 0 means client has closed connection
-                      if(recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0)
-                      {
+                      if (recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0) {
                           printf("Client closed connection: %d", client->sock);
-                          close(client->sock);      
+                          close(client->sock);
 
                           closeClient(client->sock, &openSockets, &maxfds);
 
                       }
-                      // We don't check for -1 (nothing received) because select()
-                      // only triggers if there is something on the socket for us.
-                      else
-                      {
-                          std::cout << buffer << std::endl;
-                          runCommand(client->sock, &openSockets, &maxfds,
-                                        buffer);
+                          // We don't check for -1 (nothing received) because select()
+                          // only triggers if there is something on the socket for us.
+                      else {
+                          // Check if correct SOI
+                          if (buffer[0] == 0x01) {
+                              memcpy(buffer - 1, buffer, sizeof(buffer) - 1);
+                              std::cout << buffer << std::endl;
+                              runCommand(client->sock, &openSockets, &maxfds,
+                                         buffer);
+                          } else {
+                              if ( client->attempts < 3) {
+                                  std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
+                                  send(client->sock, dropped.c_str(), dropped.length(), 0);
+                                  client->attempts += 1;
+                              } else {
+                                  std::string dropped = "I don't know how to drop the connection but you're not getting in\n";
+                                  send(client->sock, dropped.c_str(), dropped.length(), 0);
+                              }
+                          }
                       }
                   }
                }
