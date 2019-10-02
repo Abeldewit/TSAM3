@@ -4,7 +4,8 @@
 // Command line: ./chat_server 4000 
 //
 // Author: Jacky Mallett (jacky@ru.is)
-//
+// scp -r TSAM3 hartmann14@skel.ru.is:/home/hir.is/hartmann14/tsam
+///130.208.243.61
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -44,7 +45,7 @@ class Client
     int sock;              // socket of client connection
     std::string name;      // Limit length of name of client's user
     std::string GROUP_ID;  // Group ID of the server
-    std::string HOST_IP;   // IP address of client
+    std::string HOST_IP;   // IP address of client*/
     int SERVPORT;          // Port of the server 
 
     Client(int socket) : sock(socket){} 
@@ -55,7 +56,7 @@ class Client
 
 
 /// Global var - Added, string ServerID <-- ID our server?
-std::string serverID = "V_GROUP_100";
+std::string serverID = "V_GROUP100";
 
 
 // Note: map is not necessarily the most efficient method to use here,
@@ -66,6 +67,8 @@ std::string serverID = "V_GROUP_100";
 // (indexed on socket no.) sacrificing memory for speed.
 
 std::map<int, Client*> clients; // Lookup table for per Client information
+
+
 int mainClient = 0;
 
 // Open socket for specified port.
@@ -154,11 +157,11 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 
      FD_CLR(clientSocket, openSockets);
 }
-
-
+/*
+    As of now not calling this function
 void listServers(int clientSocket, std::string GROUP_ID)
 {           
-     /*https://beej.us/guide/bgnet/html/multi/getpeernameman.html */
+     /// https://beej.us/guide/bgnet/html/multi/getpeernameman.html
            
     // buffer, 
     char id_buff[256];
@@ -193,7 +196,7 @@ void listServers(int clientSocket, std::string GROUP_ID)
 
     } 
     
-    send(idSock, "Hello, world!\n", 13, 0);
+    send(idSock, "V_GROUP100", 13, 0);
 
     n = (idSock,id_buff,255);
     
@@ -205,7 +208,7 @@ void listServers(int clientSocket, std::string GROUP_ID)
     std::cout << GROUP_ID << "," << HOST_IP << ";" << PORT << std::endl;
  
 }
-
+*/
 // When our client is logged in these commands will be active
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
     if( (tokens[0].compare("GETMSG")) && tokens.size() == 2) {
@@ -307,14 +310,41 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
               }
           }
       }
-      else if(tokens[0].compare("LISTSERVERS") == 0)
+      else if(tokens[0].compare("LISTSERVER") == 0)
       {         
-            std::string group_id;
-            for(auto const& pair : clients)
-            {
-                listServers(clientSocket, group_id);
-            };
+       
+    
+            std::string msg;
+            socklen_t len;
+            struct sockaddr_storage addr;
+
+            len = sizeof addr;
+            char ipstr[1024];
+            getpeername(clientSocket, (struct sockaddr*)&addr, &len);
+            struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
+
+            inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
+            for(auto const& elem : clients)
+            {   
+
+                elem.second->GROUP_ID = "derp";
+                elem.second->HOST_IP = ipstr;
+                elem.second->SERVPORT = ntohs(clientS->sin_port);
+                send(clientSocket, msg.c_str(), msg.length(), 0);
+            }
             
+            send(clientSocket, msg.c_str(), msg.length(), 0);
+
+            for(auto const& elem : clients)
+            {  
+            
+               std::cout << "TEST" << elem.second->HOST_IP << std::endl;
+               std::cout << "TEST" << elem.second->GROUP_ID << std::endl;
+               std::cout << "TEST" << elem.second->SERVPORT << std::endl;
+            
+            }
+        
+         
       }
                     
                 
