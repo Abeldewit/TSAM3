@@ -156,33 +156,54 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 }
 
 
-void ListServers(int sock, std::string group_id, int port)
-{   
-    char buffer[INET_ADDRSTRLEN] = "";
-
-    struct sockaddr_in sin;
-    unsigned int addrlen = sizeof(sin);
-    sin.sin_family = AF_INET;
-    unsigned int PortNo = 0;
-
-    getsockname(sock, (struct sockaddr *)&sin, &addrlen);
-    sin.sin_port = htons(PortNo);
+void listServers(int clientSocket, std::string GROUP_ID)
+{           
+     /*https://beej.us/guide/bgnet/html/multi/getpeernameman.html */
+           
+    // buffer, 
+    char id_buff[256];
+    // Trying to make a new socket, for opening a new current connection to a server? 
+    int idSock;
     
-    socklen_t len = sizeof(sin);
-    if (getpeername(sock, (struct sockaddr *)&sin, &len) != 0) 
-    {
-                perror("getpeername");
-    } 
-    else 
-    {
-                inet_ntop(AF_INET, &sin.sin_addr, buffer, sizeof buffer);
+    socklen_t len;
+            
+    struct sockaddr_storage addr;
+    char HOST_IP[INET6_ADDRSTRLEN];
+    int PORT;
+    len = sizeof(addr);
+
+    //IPv4  --- getpeername, should get peername of the peer that is connected to our socket 
+    getpeername(clientSocket, (struct sockaddr*)&addr, &len);
+    if (addr.ss_family == AF_INET) 
+    {   
+        struct sockaddr_in *clientSocket = (struct sockaddr_in *)&addr;
+        PORT = ntohs(clientSocket->sin_port);
+        inet_ntop(AF_INET, &clientSocket->sin_addr, HOST_IP, sizeof HOST_IP);
     }
+    
+    // From the upper half I think I have resolved an IP-Addresss of a connected client, and its portnumber? e
+    int n;
 
+    unsigned int cli_leng = sizeof(len);
+    
+    //Trying to issue a new socket to send a message, idea is to send out our group_id? and then recieve incoming group numbers? 
+    idSock = accept(clientSocket, (struct sockaddr *)&len, &cli_leng);
+    if (idSock < 0){
+         perror("ERROR on accept");
 
-    std::cout << group_id << "," <<  buffer << "," << PortNo << std::endl;
+    } 
+    
+    send(idSock, "Hello, world!\n", 13, 0);
 
+    n = (idSock,id_buff,255);
+    
+    std::cout << id_buff << std::endl;
+    GROUP_ID = id_buff;
+    
+    close(idSock);   
 
-   
+    std::cout << GROUP_ID << "," << HOST_IP << ";" << PORT << std::endl;
+ 
 }
 
 // When our client is logged in these commands will be active
@@ -287,31 +308,16 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
           }
       }
       else if(tokens[0].compare("LISTSERVERS") == 0)
-      {   
-            std::string ServerList;
-          /* LISTSERVERS,<FROM GROUP ID> Reply with servers response (below)
-                SERVERS
-                Provide a list of directly connected - i.e. 1-hop, servers to
-                this server.
-                The first IP address in the list should be the IP of the con-
-                nected server.
-                Servers should be specified as GROUP ID, the HOST IP,
-                and PORT they will accept connections on, comma sepa-
-                rated within the message, each server separated by ;
-                eg. SERVERS,V GROUP 1,130.208.243.61,8888;V GROUP 2,10.2.132.12,888;
-            */  std::string group_id;
-                int portNo = 4000;
-                for(auto& elem : clients)
-                {   
-                    //ServerList = elem.second;
-                  ///  group_id = elem.at('GROUP_ID');
-                    std::cout << "," << group_id;
-                    ListServers(clientSocket, group_id, portNo);
-
-                }
-
-    
+      {         
+            std::string group_id;
+            for(auto const& pair : clients)
+            {
+                listServers(clientSocket, group_id);
+            };
+            
       }
+                    
+                
       else
       {
           std::cout << "Unknown command from client:" << buffer << std::endl;
