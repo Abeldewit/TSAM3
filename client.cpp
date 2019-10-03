@@ -118,7 +118,9 @@ int main(int argc, char* argv[])
         bzero(buffer, sizeof(buffer));
 
         fgets(buffer, sizeof(buffer), stdin);
-
+        memcpy(buffer + 1, buffer, sizeof(buffer)+2);
+        buffer[0] = 0x01;
+        buffer[sizeof(buffer)-1] = 0x04;
 
         nwrite = send(serverSocket, buffer, strlen(buffer),0);
 

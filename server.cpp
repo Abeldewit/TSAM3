@@ -366,7 +366,7 @@ int sendCommand(int clientSocket, std::string msg) {
 
     char buffer[n+3];
     strcpy(buffer, msg.c_str());
-    memcpy(buffer + 2, buffer, sizeof(buffer));
+    memcpy(buffer + 1, buffer, sizeof(buffer)+2);
     buffer[0] = 0x01;
     buffer[n+1] = 0x04;
 
