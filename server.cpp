@@ -161,6 +161,22 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
      // And remove from the list of open sockets.
      FD_CLR(clientSocket, openSockets);
 }
+
+int sendCommand(int clientSocket, std::string msg) {
+    int n = msg.length();
+
+    char buffer[n+3];
+    strcpy(buffer, msg.c_str());
+    memcpy(buffer + 1, buffer, sizeof(buffer)+2);
+    buffer[0] = 0x01;
+    buffer[n+1] = 0x04;
+
+    if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
 /*
     As of now not calling this function
 void listServers(int clientSocket, std::string GROUP_ID)
@@ -226,7 +242,28 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
     } else if( (tokens[0].compare("CONNECTTO")) && tokens.size() == 3) {
         // We force the server to connect to another server
+        struct addrinfo hints;
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
 
+
+        memset(&hints, 0, sizeof(hints));
+
+        struct hostent *o_server;
+        o_server = gethostbyname(tokens[1].c_str());
+
+        struct sockaddr_in serv_addr;
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        bcopy((char *)o_server->h_addr,
+              (char *)&serv_addr.sin_addr.s_addr,
+              serv_addr.sin_port = htons(atoi(tokens[2].c_str())));
+
+        int o_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if(connect(o_socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr) )< 0)
+        {
+            perror("Connect failed: ");
+            exit(0);
+        }
     }
 
 }
@@ -237,7 +274,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         clients[clientSocket]->name = tokens[1];
         std::string msg = "Connected ";
         msg += tokens[1];
-        send(clientSocket, msg.c_str(), msg.length(),0);
+        sendCommand(clientSocket, msg);
     }
     else if(tokens[0].compare("LEAVE") == 0)
     {
@@ -259,7 +296,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         }
         // Reducing the msg length by 1 loses the excess "," - which
         // granted is totally cheating.
-        send(clientSocket, msg.c_str(), msg.length()-1, 0);
+        sendCommand(clientSocket, msg);
 
     }
         // This is slightly fragile, since it's relying on the order
@@ -274,7 +311,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
         for(auto const& pair : clients)
         {
-            send(pair.second->sock, msg.c_str(), msg.length(),0);
+            sendCommand(pair.second->sock, msg);
         }
     }
     else if(tokens[0].compare("MSG") == 0)
@@ -288,7 +325,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
                 {
                     msg += *i + " ";
                 }
-                send(pair.second->sock, msg.c_str(), msg.length(),0);
+                sendCommand(pair.second->sock, msg);
             }
         }
     }
@@ -315,7 +352,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             send(clientSocket, msg.c_str(), msg.length(), 0);
         }
 
-        send(clientSocket, msg.c_str(), msg.length(), 0);
+        sendCommand(clientSocket, msg);
 
         for(auto const& elem : clients)
         {
@@ -330,11 +367,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
     }
 }
 
-// Process command from client on the server
-
-void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
-                  char *buffer) 
-{
+void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer) {
   std::vector<std::string> tokens;
   std::string token;
 
@@ -359,22 +392,6 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       // Do server stuff
       serverCommand(clientSocket, openSockets, maxfds, tokens);
   }
-}
-
-int sendCommand(int clientSocket, std::string msg) {
-    int n = msg.length();
-
-    char buffer[n+3];
-    strcpy(buffer, msg.c_str());
-    memcpy(buffer + 1, buffer, sizeof(buffer)+2);
-    buffer[0] = 0x01;
-    buffer[n+1] = 0x04;
-
-    if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
-        return 0;
-    } else {
-        return 1;
-    }
 }
 
 int main(int argc, char* argv[])
