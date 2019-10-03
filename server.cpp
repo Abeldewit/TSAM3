@@ -165,9 +165,10 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 int sendCommand(int clientSocket, std::string msg) {
     int n = msg.length();
 
-    char buffer[n+3];
+    char buffer[n+2];
+    memset(buffer, 0, sizeof(buffer));
     strcpy(buffer, msg.c_str());
-    memcpy(buffer + 1, buffer, sizeof(buffer)+2);
+    memmove(buffer + 1, buffer, sizeof(buffer));
     buffer[0] = 0x01;
     buffer[n+1] = 0x04;
 
@@ -177,58 +178,7 @@ int sendCommand(int clientSocket, std::string msg) {
         return 1;
     }
 }
-/*
-    As of now not calling this function
-void listServers(int clientSocket, std::string GROUP_ID)
-{           
-     /// https://beej.us/guide/bgnet/html/multi/getpeernameman.html
-           
-    // buffer, 
-    char id_buff[256];
-    // Trying to make a new socket, for opening a new current connection to a server? 
-    int idSock;
-    
-    socklen_t len;
-            
-    struct sockaddr_storage addr;
-    char HOST_IP[INET6_ADDRSTRLEN];
-    int PORT;
-    len = sizeof(addr);
 
-    //IPv4  --- getpeername, should get peername of the peer that is connected to our socket 
-    getpeername(clientSocket, (struct sockaddr*)&addr, &len);
-    if (addr.ss_family == AF_INET) 
-    {   
-        struct sockaddr_in *clientSocket = (struct sockaddr_in *)&addr;
-        PORT = ntohs(clientSocket->sin_port);
-        inet_ntop(AF_INET, &clientSocket->sin_addr, HOST_IP, sizeof HOST_IP);
-    }
-    
-    // From the upper half I think I have resolved an IP-Addresss of a connected client, and its portnumber? e
-    int n;
-
-    unsigned int cli_leng = sizeof(len);
-    
-    //Trying to issue a new socket to send a message, idea is to send out our group_id? and then recieve incoming group numbers? 
-    idSock = accept(clientSocket, (struct sockaddr *)&len, &cli_leng);
-    if (idSock < 0){
-         perror("ERROR on accept");
-
-    } 
-    
-    send(idSock, "V_GROUP100", 13, 0);
-
-    n = (idSock,id_buff,255);
-    
-    std::cout << id_buff << std::endl;
-    GROUP_ID = id_buff;
-    
-    close(idSock);   
-
-    std::cout << GROUP_ID << "," << HOST_IP << ";" << PORT << std::endl;
- 
-}
-*/
 // When our client is logged in these commands will be active
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
     std::cout << tokens[0] << std::endl;
@@ -380,7 +330,8 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer) {
   std::vector<std::string> tokens;
   std::string token;
-
+  std::cout << buffer << std::endl;
+  std::cout.flush();
   // Split command from client into tokens for parsing
   std::stringstream stream(buffer);
 
@@ -393,16 +344,16 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
           std::string msg = "Welcome master, send me your commands";
           send(clientSocket, msg.c_str(), msg.length(), 0);
       }
-  }
-
-  if ( clientSocket == mainClient ) {
+  } else if ( clientSocket != mainClient ) {
       // Do our client stuff
-      std::cout << "Client command:";
-      clientCommand(clientSocket, openSockets, maxfds, tokens);
+      std::cout << "Server command:";
+      serverCommand(clientSocket, openSockets, maxfds, tokens);
       std::cout.flush();
   } else {
       // Do server stuff
-      serverCommand(clientSocket, openSockets, maxfds, tokens);
+      std::cout << "Client command:";
+      clientCommand(clientSocket, openSockets, maxfds, tokens);
+      std::cout.flush();
   }
 }
 
@@ -509,7 +460,7 @@ int main(int argc, char* argv[])
                       else {
                           // Check if correct SOI
                           if (buffer[0] == 0x01) {
-                              memcpy(buffer - 1, buffer, sizeof(buffer) - 1);
+                              memmove(buffer - 1, buffer, sizeof(buffer) - 1);
                               std::cout << buffer << std::endl;
                               runCommand(client->sock, &openSockets, &maxfds,
                                          buffer);
