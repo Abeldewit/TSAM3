@@ -363,19 +363,6 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
   }
 }
 
-void sendCommand(int clientSocket, std::string buffer) {
-
-    // I used to be an adventurer, just like you, but then I took C++ to the knee
-    // I have no clue how to add the SOI and EOI
-
-    char finalsend[sizeof(buffer) + 2];
-    strcpy(finalsend + 1, buffer.c_str());
-    finalsend[0] = 0x01;
-    finalsend[sizeof(buffer) - 1] = 0x04;
-    std::cout << finalsend << std::endl;
-    send(clientSocket, buffer.c_str(), sizeof(buffer), 0);
-}
-
 int main(int argc, char* argv[])
 {
     bool finished;
@@ -459,9 +446,9 @@ int main(int argc, char* argv[])
                   Client *client = pair.second;
 
                   if(client->attempts > 2) {
-                      printf("Too many attempts, closing: %d", client->sock);
-                      close(client->sock);
-                      closeClient(client->sock, &openSockets, &maxfds);
+                      printf("Too many attempts: %d", client->sock);
+//                      close(client->sock);
+//                      closeClient(client->sock, &openSockets, &maxfds);
                   }
 
                   if(FD_ISSET(client->sock, &readSockets)) {
