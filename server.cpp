@@ -231,6 +231,105 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
 }
 
+void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
+    if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
+    {
+        clients[clientSocket]->name = tokens[1];
+        std::string msg = "Connected ";
+        msg += tokens[1];
+        send(clientSocket, msg.c_str(), msg.length(),0);
+    }
+    else if(tokens[0].compare("LEAVE") == 0)
+    {
+        // Close the socket, and leave the socket handling
+        // code to deal with tidying up clients etc. when
+        // select() detects the OS has torn down the connection.
+
+        closeClient(clientSocket, openSockets, maxfds);
+    }
+    else if(tokens[0].compare("WHO") == 0)
+    {
+        std::cout << "Who is logged on" << std::endl;
+        std::string msg;
+
+        for(auto const& names : clients)
+        {
+            msg += names.second->name + ",";
+
+        }
+        // Reducing the msg length by 1 loses the excess "," - which
+        // granted is totally cheating.
+        send(clientSocket, msg.c_str(), msg.length()-1, 0);
+
+    }
+        // This is slightly fragile, since it's relying on the order
+        // of evaluation of the if statement.
+    else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
+    {
+        std::string msg;
+        for(auto i = tokens.begin()+2;i != tokens.end();i++)
+        {
+            msg += *i + " ";
+        }
+
+        for(auto const& pair : clients)
+        {
+            send(pair.second->sock, msg.c_str(), msg.length(),0);
+        }
+    }
+    else if(tokens[0].compare("MSG") == 0)
+    {
+        for(auto const& pair : clients)
+        {
+            if(pair.second->name.compare(tokens[1]) == 0)
+            {
+                std::string msg;
+                for(auto i = tokens.begin()+2;i != tokens.end();i++)
+                {
+                    msg += *i + " ";
+                }
+                send(pair.second->sock, msg.c_str(), msg.length(),0);
+            }
+        }
+    }
+    else if(tokens[0].compare("LISTSERVER") == 0)
+    {
+
+
+        std::string msg;
+        socklen_t len;
+        struct sockaddr_storage addr;
+
+        len = sizeof addr;
+        char ipstr[1024];
+        getpeername(clientSocket, (struct sockaddr*)&addr, &len);
+        struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
+
+        inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
+        for(auto const& elem : clients)
+        {
+
+            elem.second->GROUP_ID = "derp";
+            elem.second->HOST_IP = ipstr;
+            elem.second->SERVPORT = ntohs(clientS->sin_port);
+            send(clientSocket, msg.c_str(), msg.length(), 0);
+        }
+
+        send(clientSocket, msg.c_str(), msg.length(), 0);
+
+        for(auto const& elem : clients)
+        {
+
+            std::cout << "TEST" << elem.second->HOST_IP << std::endl;
+            std::cout << "TEST" << elem.second->GROUP_ID << std::endl;
+            std::cout << "TEST" << elem.second->SERVPORT << std::endl;
+
+        }
+
+
+    }
+}
+
 // Process command from client on the server
 
 void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
@@ -258,109 +357,24 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds,
       clientCommand(clientSocket, openSockets, maxfds, tokens);
   } else {
       // Do server stuff
-      if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
-      {
-         clients[clientSocket]->name = tokens[1];
-         std::string msg = "Connected ";
-         msg += tokens[1];
-         send(clientSocket, msg.c_str(), msg.length(),0);
-      }
-      else if(tokens[0].compare("LEAVE") == 0)
-      {
-          // Close the socket, and leave the socket handling
-          // code to deal with tidying up clients etc. when
-          // select() detects the OS has torn down the connection.
-
-          closeClient(clientSocket, openSockets, maxfds);
-      }
-      else if(tokens[0].compare("WHO") == 0)
-      {
-         std::cout << "Who is logged on" << std::endl;
-         std::string msg;
-
-         for(auto const& names : clients)
-         {
-            msg += names.second->name + ",";
-
-         }
-         // Reducing the msg length by 1 loses the excess "," - which
-         // granted is totally cheating.
-         send(clientSocket, msg.c_str(), msg.length()-1, 0);
-
-      }
-      // This is slightly fragile, since it's relying on the order
-      // of evaluation of the if statement.
-      else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
-      {
-          std::string msg;
-          for(auto i = tokens.begin()+2;i != tokens.end();i++)
-          {
-              msg += *i + " ";
-          }
-
-          for(auto const& pair : clients)
-          {
-              send(pair.second->sock, msg.c_str(), msg.length(),0);
-          }
-      }
-      else if(tokens[0].compare("MSG") == 0)
-      {
-          for(auto const& pair : clients)
-          {
-              if(pair.second->name.compare(tokens[1]) == 0)
-              {
-                  std::string msg;
-                  for(auto i = tokens.begin()+2;i != tokens.end();i++)
-                  {
-                      msg += *i + " ";
-                  }
-                  send(pair.second->sock, msg.c_str(), msg.length(),0);
-              }
-          }
-      }
-      else if(tokens[0].compare("LISTSERVER") == 0)
-      {         
-       
-    
-            std::string msg;
-            socklen_t len;
-            struct sockaddr_storage addr;
-
-            len = sizeof addr;
-            char ipstr[1024];
-            getpeername(clientSocket, (struct sockaddr*)&addr, &len);
-            struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
-
-            inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
-            for(auto const& elem : clients)
-            {   
-
-                elem.second->GROUP_ID = "derp";
-                elem.second->HOST_IP = ipstr;
-                elem.second->SERVPORT = ntohs(clientS->sin_port);
-                send(clientSocket, msg.c_str(), msg.length(), 0);
-            }
-            
-            send(clientSocket, msg.c_str(), msg.length(), 0);
-
-            for(auto const& elem : clients)
-            {  
-            
-               std::cout << "TEST" << elem.second->HOST_IP << std::endl;
-               std::cout << "TEST" << elem.second->GROUP_ID << std::endl;
-               std::cout << "TEST" << elem.second->SERVPORT << std::endl;
-            
-            }
-        
-         
-      }
-                    
-                
-      else
-      {
-          std::cout << "Unknown command from client:" << buffer << std::endl;
-      }
+      serverCommand(clientSocket, openSockets, maxfds, tokens);
   }
+}
+
+int sendCommand(int clientSocket, std::string msg) {
+    int n = msg.length();
+
+    char buffer[n+3];
+    strcpy(buffer, msg.c_str());
+    memcpy(buffer + 2, buffer, sizeof(buffer));
+    buffer[0] = 0x01;
+    buffer[n+1] = 0x04;
+
+    if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 int main(int argc, char* argv[])
@@ -447,6 +461,7 @@ int main(int argc, char* argv[])
 
                   if(client->attempts > 2) {
                       printf("Too many attempts: %d", client->sock);
+
 //                      close(client->sock);
 //                      closeClient(client->sock, &openSockets, &maxfds);
                   }
@@ -472,11 +487,14 @@ int main(int argc, char* argv[])
                           } else {
                               if ( client->attempts < 3) {
                                   std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
-                                  send(client->sock, dropped.c_str(), dropped.length(), 0);
+                                  sendCommand(client->sock, dropped);
+                                  //send(client->sock, dropped.c_str(), dropped.length(), 0);
+
                                   client->attempts += 1;
                               } else {
                                   std::string dropped = "I don't know how to drop the connection but you're not getting in\n";
                                   send(client->sock, dropped.c_str(), dropped.length(), 0);
+
                               }
                           }
                       }
