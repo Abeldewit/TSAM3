@@ -235,12 +235,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
     if( (tokens[0].compare("GETMSG") == 0) && tokens.size() == 2) {
         // We try to receive a message from someone
         std::cout << "GETMSG received" << std::endl;
+
     } else if( (tokens[0].compare("SENDMSG") == 0) && tokens.size() == 3) {
         // We send a message to someone
+        sendCommand(atoi(tokens[1].c_str()), tokens[2]);
         std::cout << "SENDMSG received" << std::endl;
+
     } else if( (tokens[0].compare("LISTSERVERS") == 0) && tokens.size() == 2) {
         // We list all the servers that our own server is connected to
         std::cout << "LIST received" << std::endl;
+
     } else if( (tokens[0].compare("CONNECT") == 0) ) {
         // We force the server to connect to another server
         std::cout << "CONNECT received" << std::endl;
@@ -257,9 +261,17 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         if (connect(o_socket, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
             perror("Connect failed: ");
             exit(0);
+        } else {
+            std::cout << "Connected new server to: " << o_socket << std::endl;
         }
 
-        std::string msg = "I want to connect!";
+        std::string msg;
+        if (tokens.size() == 4) {
+            msg = "CONNECT ";
+            msg += tokens[3];
+        } else {
+            msg = "CONNECT V_GROUP_100";
+        }
         sendCommand(o_socket, msg);
 
     }
