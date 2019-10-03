@@ -231,39 +231,37 @@ void listServers(int clientSocket, std::string GROUP_ID)
 */
 // When our client is logged in these commands will be active
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
-    if( (tokens[0].compare("GETMSG")) && tokens.size() == 2) {
+    std::cout << tokens[0] << std::endl;
+    if( (tokens[0].compare("GETMSG") == 0) && tokens.size() == 2) {
         // We try to receive a message from someone
-
-    } else if( (tokens[0].compare("SENDMSG")) && tokens.size() == 3) {
+        std::cout << "GETMSG received" << std::endl;
+    } else if( (tokens[0].compare("SENDMSG") == 0) && tokens.size() == 3) {
         // We send a message to someone
-
-    } else if( (tokens[0].compare("LISTSERVERS")) && tokens.size() == 2) {
+        std::cout << "SENDMSG received" << std::endl;
+    } else if( (tokens[0].compare("LISTSERVERS") == 0) && tokens.size() == 2) {
         // We list all the servers that our own server is connected to
-
-    } else if( (tokens[0].compare("CONNECTTO")) && tokens.size() == 3) {
+        std::cout << "LIST received" << std::endl;
+    } else if( (tokens[0].compare("CONNECT") == 0) ) {
         // We force the server to connect to another server
-        struct addrinfo hints;
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
-
-
-        memset(&hints, 0, sizeof(hints));
-
-        struct hostent *o_server;
-        o_server = gethostbyname(tokens[1].c_str());
-
-        struct sockaddr_in serv_addr;
-        bzero((char *) &serv_addr, sizeof(serv_addr));
-        bcopy((char *)o_server->h_addr,
-              (char *)&serv_addr.sin_addr.s_addr,
-              serv_addr.sin_port = htons(atoi(tokens[2].c_str())));
+        std::cout << "CONNECT received" << std::endl;
+        sendCommand(clientSocket, "Connecting to other server...");
+        struct sockaddr_in servaddr;
+        bzero(&servaddr, sizeof(servaddr));
+        servaddr.sin_family = AF_INET;
+        struct hostent *he;
+        he = gethostbyname(tokens[1].c_str());
+        memcpy(&servaddr.sin_addr, he->h_addr_list[0], he->h_length);
+        servaddr.sin_port = htons(atoi(tokens[2].c_str()));
 
         int o_socket = socket(AF_INET, SOCK_STREAM, 0);
-        if(connect(o_socket, (struct sockaddr *)&serv_addr, sizeof(serv_addr) )< 0)
-        {
+        if (connect(o_socket, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0) {
             perror("Connect failed: ");
             exit(0);
         }
+
+        std::string msg = "I want to connect!";
+        sendCommand(o_socket, msg);
+
     }
 
 }
@@ -387,7 +385,9 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
 
   if ( clientSocket == mainClient ) {
       // Do our client stuff
+      std::cout << "Client command:";
       clientCommand(clientSocket, openSockets, maxfds, tokens);
+      std::cout.flush();
   } else {
       // Do server stuff
       serverCommand(clientSocket, openSockets, maxfds, tokens);
@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
                clientSock = accept(listenSock, (struct sockaddr *)&client,
                                    &clientLen);
                std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT\n";
-               send(clientSock, msg.c_str(), msg.length(),0);
+               sendCommand(clientSock, msg);
                // Add new client to the list of open sockets
                FD_SET(clientSock, &openSockets);
 
