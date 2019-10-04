@@ -191,9 +191,9 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         sendCommand(atoi(tokens[1].c_str()), tokens[2]);
         std::cout << "SENDMSG received" << std::endl;
 
-    } else if( (tokens[0].compare("LISTSERVERS") == 0) && tokens.size() == 2) {
+    } else if( (tokens[0].compare("LISTSERVERS") == 0)) {
         // We list all the servers that our own server is connected to
-        std::cout << "LIST received" << std::endl;
+           sendCommand(clientSocket, tokens[0]);
 
     } else if( (tokens[0].compare("CONNECT") == 0) ) {
         // We force the server to connect to another server
@@ -204,6 +204,11 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         servaddr.sin_family = AF_INET;
         struct hostent *he;
         he = gethostbyname(tokens[1].c_str());
+        if(he == NULL)
+        {
+            perror("no such host");
+            exit(0);
+        }
         memcpy(&servaddr.sin_addr, he->h_addr_list[0], he->h_length);
         servaddr.sin_port = htons(atoi(tokens[2].c_str()));
 
@@ -289,9 +294,34 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             }
         }
     }
-    else if(tokens[0].compare("LISTSERVER") == 0)
+    else if(tokens[0].compare("LISTSERVERS") == 0)
     {
+        
+        std::string msg;
+        socklen_t len;
+        struct sockaddr_storage addr;
 
+        len = sizeof addr;
+        char ipstr[1024];
+        //getpeername
+        getsockname(clientSocket, (struct sockaddr*)&addr, &len);
+        struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
+        int port = ntohs(clientS->sin_port);
+        inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
+        for(auto const& elem : clients)
+        {   
+            elem.second->GROUP_ID = serverID;
+            elem.second->HOST_IP = ipstr;
+            elem.second->SERVPORT = port;
+
+            msg += serverID + "," + ipstr + ":" + std::to_string(port) + "\n";
+           
+
+        //  send(clientSocket, msg.c_str(), msg.length(), 0);
+        }
+        sendCommand(clientSocket, msg);
+
+        /*
 
         std::string msg;
         socklen_t len;
@@ -303,6 +333,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
 
         inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
+    
         for(auto const& elem : clients)
         {
 
@@ -311,6 +342,8 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             elem.second->SERVPORT = ntohs(clientS->sin_port);
             send(clientSocket, msg.c_str(), msg.length(), 0);
         }
+
+        
 
         sendCommand(clientSocket, msg);
 
@@ -321,7 +354,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             std::cout << "TEST" << elem.second->GROUP_ID << std::endl;
             std::cout << "TEST" << elem.second->SERVPORT << std::endl;
 
-        }
+        }*/
 
 
     }
