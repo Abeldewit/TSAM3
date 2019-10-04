@@ -46,7 +46,7 @@ class Client
     std::string name;      // Limit length of name of client's user
     std::string GROUP_ID;  // Group ID of the server
     std::string HOST_IP;   // IP address of client*/
-    int SERVPORT;          // Port of the server
+    std::string SERVPORT;          // Port of the server
 
     int attempts = 0;
     std::chrono::seconds timeout;
@@ -193,7 +193,17 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
     } else if( (tokens[0].compare("LISTSERVERS") == 0)) {
         // We list all the servers that our own server is connected to
-           sendCommand(clientSocket, tokens[0]);
+       
+        std::string msg;
+        for(auto const& elem : clients)
+        {   
+            msg += elem.second->GROUP_ID;
+            msg +=elem.second->HOST_IP;
+            msg +=elem.second->SERVPORT;
+        }
+        sendCommand(clientSocket, msg);
+       /// sendCommand(clientSocket, msg);
+        
 
     } else if( (tokens[0].compare("CONNECT") == 0) ) {
         // We force the server to connect to another server
@@ -227,6 +237,13 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         } else {
             msg = "CONNECT V_GROUP_100";
         }
+        
+        Client *newServer = new Client(o_socket);
+        newServer->HOST_IP = tokens[1];
+        newServer->SERVPORT = tokens[2];
+        newServer->GROUP_ID = serverID;
+        clients.emplace(o_socket, newServer);
+  
         sendCommand(o_socket, msg);
 
     }
@@ -296,7 +313,21 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
     }
     else if(tokens[0].compare("LISTSERVERS") == 0)
     {
+        std::string msg;
+        for(auto const& elem : clients)
+        {   
+              
+            msg += elem.second->GROUP_ID;
+            msg +=elem.second->HOST_IP;
+            msg +=elem.second->SERVPORT;
+        }
+        sendCommand(clientSocket, msg);
         
+
+    }
+    else if(tokens[0].compare("SEECLIENTS") == 0)
+    {   
+
         std::string msg;
         socklen_t len;
         struct sockaddr_storage addr;
@@ -304,7 +335,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         len = sizeof addr;
         char ipstr[1024];
         //getpeername
-        getsockname(clientSocket, (struct sockaddr*)&addr, &len);
+        getpeername(clientSocket, (struct sockaddr*)&addr, &len);
         struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
         int port = ntohs(clientS->sin_port);
         inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
@@ -321,43 +352,9 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         }
         sendCommand(clientSocket, msg);
 
-        /*
-
-        std::string msg;
-        socklen_t len;
-        struct sockaddr_storage addr;
-
-        len = sizeof addr;
-        char ipstr[1024];
-        getpeername(clientSocket, (struct sockaddr*)&addr, &len);
-        struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
-
-        inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
-    
-        for(auto const& elem : clients)
-        {
-
-            elem.second->GROUP_ID = "derp";
-            elem.second->HOST_IP = ipstr;
-            elem.second->SERVPORT = ntohs(clientS->sin_port);
-            send(clientSocket, msg.c_str(), msg.length(), 0);
-        }
-
-        
-
-        sendCommand(clientSocket, msg);
-
-        for(auto const& elem : clients)
-        {
-
-            std::cout << "TEST" << elem.second->HOST_IP << std::endl;
-            std::cout << "TEST" << elem.second->GROUP_ID << std::endl;
-            std::cout << "TEST" << elem.second->SERVPORT << std::endl;
-
-        }*/
-
 
     }
+
 }
 
 void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer) {
