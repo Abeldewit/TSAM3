@@ -1,5 +1,6 @@
 out: server client
 	@echo "Files made"
+	@clear
 
 server: server.cpp
 	g++ -std=c++11 server.cpp -o tsamvgroup100

@@ -164,14 +164,18 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 }
 
 int sendCommand(int clientSocket, std::string msg) {
-    int n = msg.length();
+    if(msg[msg.length()-1] == 0x0a) {
+        msg.pop_back();
+    }
 
+    int n = msg.length();
     char buffer[n+2];
     memset(buffer, 0, sizeof(buffer));
+
     strcpy(buffer, msg.c_str());
     memmove(buffer + 1, buffer, sizeof(buffer));
-    buffer[0] = 0x01;
-    buffer[n+1] = 0x04;
+    buffer[0] = 1;
+    buffer[n+1] = 4;
 
     if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
         return 0;
@@ -365,7 +369,6 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     std::vector<std::string> tokens;
     std::string token;
     // Split command from client into tokens for parsing
-    std::cout << buffer << std::endl;
     std::cout.flush();
     std::stringstream stream(buffer);
 
@@ -388,13 +391,15 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
         // Do our client stuff
         std::cout << "Client command:" << buffer;
         clientCommand(clientSocket, openSockets, maxfds, tokens);
-        std::cout.flush();
+
     } else {
         // Do server stuff
         std::cout << "Server command:" << buffer << "\n";
         serverCommand(clientSocket, openSockets, maxfds, tokens);
-        std::cout.flush();
+
     }
+
+    std::cout.flush();
 }
 
 int main(int argc, char* argv[])
@@ -499,23 +504,19 @@ int main(int argc, char* argv[])
                             // only triggers if there is something on the socket for us.
                         else {
                             // Check if correct SOI
-                            if (buffer[0] == 0x01) {
-                                memmove(buffer - 1, buffer, sizeof(buffer) - 1);
-                                buffer[sizeof(buffer)-1] = '\0';
-                                //std::cout << buffer << std::endl;
+                            if (buffer[0] == 1) {
+                                std::cout << buffer << std::endl;
+                                int n = strlen(buffer);
+                                memmove(buffer - 1, buffer, n);
+                                buffer[n-2] = '\0';
+                                buffer[n-1] = '\0';
                                 runCommand(client->sock, &openSockets, &maxfds,
                                            buffer);
                             } else {
                                 if ( client->attempts < 3) {
                                     std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
                                     sendCommand(client->sock, dropped);
-                                    //send(client->sock, dropped.c_str(), dropped.length(), 0);
-
                                     client->attempts += 1;
-                                } else {
-                                    std::string dropped = "I don't know how to drop the connection but you're not getting in\n";
-                                    sendCommand(client->sock, dropped);
-
                                 }
                             }
                         }
@@ -523,5 +524,13 @@ int main(int argc, char* argv[])
                 }
             }
         }
+        /* This is me trying to close a connection */
+//        for(auto const& pair : clients) {
+//            Client *client = pair.second;
+//            if ( client->attempts > 3 ) {
+//                close(client->sock);
+//                closeClient(client->sock, &openSockets, &maxfds);
+//            }
+//        }
     }
 }

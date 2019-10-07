@@ -27,6 +27,27 @@
 #include <thread>
 #include <map>
 
+int sendCommand(int clientSocket, std::string msg) {
+    if(msg[msg.length()-1] == 0x0a) {
+        msg.pop_back();
+    }
+
+    int n = msg.length();
+    char buffer[n+2];
+    memset(buffer, 0, sizeof(buffer));
+
+    strcpy(buffer, msg.c_str());
+    memmove(buffer + 1, buffer, sizeof(buffer));
+    buffer[0] = 1;
+    buffer[n+1] = 4;
+
+    if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 // Threaded function for handling responss from server
 
 void listenServer(int serverSocket)
@@ -118,11 +139,8 @@ int main(int argc, char* argv[])
         bzero(buffer, sizeof(buffer));
 
         fgets(buffer, sizeof(buffer), stdin);
-        memmove(buffer + 1, buffer, sizeof(buffer));
-        buffer[0] = 0x01;
-        buffer[sizeof(buffer)-1] = 0x04;
+        sendCommand(serverSocket, buffer);
 
-        nwrite = send(serverSocket, buffer, strlen(buffer),0);
 
         if(nwrite  == -1)
         {
