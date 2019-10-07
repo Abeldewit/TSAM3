@@ -365,6 +365,8 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     std::vector<std::string> tokens;
     std::string token;
     // Split command from client into tokens for parsing
+    std::cout << buffer << std::endl;
+    std::cout.flush();
     std::stringstream stream(buffer);
 
     while(stream >> token)
