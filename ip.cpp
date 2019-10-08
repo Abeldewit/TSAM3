@@ -22,7 +22,7 @@ std::string getIp()
 
     for (ifa = myaddrs; ifa != NULL; ifa = ifa->ifa_next)
     {
-        if(strncmp(ifa->ifa_name, "en0", 3) == 0) {
+        if(strncmp(ifa->ifa_name, "en", 2) == 0) {
             if (ifa->ifa_addr == NULL)
                 continue;
             if (!(ifa->ifa_flags & IFF_UP))
