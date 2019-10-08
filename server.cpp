@@ -56,10 +56,8 @@ public:
     ~Client(){}            // Virtual destructor defined for base class
 };
 
-
-
-/// Global var - Added, string ServerID <-- ID our server?
 std::string serverID = "V_GROUP_100";
+
 
 
 // Note: map is not necessarily the most efficient method to use here,
@@ -225,16 +223,20 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         } else {
             std::cout << "Connected new server to: " << o_socket << std::endl;
         }
+
+        // Add new client to the list of open sockets
+        FD_SET(o_socket, openSockets);
+
+        // And update the maximum file descriptor
+        &maxfds = std::max(maxfds, &o_socket);
+
+        // create a new client to store information.
+        clients[o_socket] = new Client(o_socket);
     }
 
 }
 
 void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
-    for(int i = 0; i < tokens.size(); i++ ) {
-        std::cout << tokens[i] << std::endl;
-    }
-    std::cout << "-----------" << std::endl;
-
     if(tokens[0].compare("LISTSERVERS") == 0)
     {
         std::string msg;
@@ -263,7 +265,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         sendCommand(clientSocket, msg);
 
 
-    } else if (tokens[0].compare("SERVERS ") == 0) {
+    } else if (tokens[0].compare("SERVERS") == 0) {
         std::cout << "Received SERVERS" << std::endl;
     }
     else {
@@ -295,17 +297,16 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     }
     if ( clientSocket == mainClient ) {
         // Do our client stuff
-        std::cout << "Client command: " << buffer << "\n";
+        std::cout << "Client command: " << buffer << "\n" << std::endl;
         clientCommand(clientSocket, openSockets, maxfds, tokens);
 
     } else {
         // Do server stuff
-        std::cout << "Server command: " << buffer << "\n";
+        std::cout << "Server command: " << buffer << "\n" << std::endl;
         serverCommand(clientSocket, openSockets, maxfds, tokens);
 
     }
-
-    
+    bzero(buffer, strlen(buffer));
 }
 
 int main(int argc, char* argv[])
@@ -351,7 +352,7 @@ int main(int argc, char* argv[])
         // Get modifiable copy of readSockets
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
-        
+
         // Look at sockets and see which ones have something to be read()
         int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, NULL);
 
@@ -393,13 +394,6 @@ int main(int argc, char* argv[])
                 {
                     Client *client = pair.second;
 
-                    if(client->attempts > 2) {
-                        printf("Too many attempts: %d", client->sock);
-
-//                      close(client->sock);
-//                      closeClient(client->sock, &openSockets, &maxfds);
-                    }
-
                     if(FD_ISSET(client->sock, &readSockets)) {
                         // recv() == 0 means client has closed connection
                         if (recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0) {
@@ -414,18 +408,15 @@ int main(int argc, char* argv[])
                             // Check if correct SOI
                             if (buffer[0] == 1) {
                                 int n = strlen(buffer);
+                                std::cout << buffer << std::endl;
                                 memmove(buffer - 1, buffer, n);
                                 buffer[n-2] = '\0';
                                 buffer[n-1] = '\0';
-                                runCommand(client->sock, &openSockets, &maxfds,
-                                           buffer);
-                                
+
+                                runCommand(client->sock, &openSockets, &maxfds, buffer);
                             } else {
-                                if ( client->attempts < 3) {
-                                    std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
-                                    sendCommand(client->sock, dropped);
-                                    client->attempts += 1;
-                                }
+                                std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
+                                sendCommand(client->sock, dropped);
                             }
                         }
 
@@ -441,5 +432,6 @@ int main(int argc, char* argv[])
 //                closeClient(client->sock, &openSockets, &maxfds);
 //            }
 //        }
+        std::cout.flush();
     }
 }
