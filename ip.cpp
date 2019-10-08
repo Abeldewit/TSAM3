@@ -8,7 +8,7 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-int main(int argc, char *argv[])
+std::string getIp()
 {
     struct ifaddrs *myaddrs, *ifa;
     void *in_addr;
@@ -22,41 +22,25 @@ int main(int argc, char *argv[])
 
     for (ifa = myaddrs; ifa != NULL; ifa = ifa->ifa_next)
     {
-        if (ifa->ifa_addr == NULL)
-            continue;
-        if (!(ifa->ifa_flags & IFF_UP))
-            continue;
-
-        switch (ifa->ifa_addr->sa_family)
-        {
-            case AF_INET:
-            {
-                struct sockaddr_in *s4 = (struct sockaddr_in *)ifa->ifa_addr;
-                in_addr = &s4->sin_addr;
-                break;
-            }
-
-            case AF_INET6:
-            {
-                struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-                in_addr = &s6->sin6_addr;
-                break;
-            }
-
-            default:
+        if(strncmp(ifa->ifa_name, "en0", 3) == 0) {
+            if (ifa->ifa_addr == NULL)
                 continue;
-        }
+            if (!(ifa->ifa_flags & IFF_UP))
+                continue;
 
-        if (!inet_ntop(ifa->ifa_addr->sa_family, in_addr, buf, sizeof(buf)))
-        {
-            printf("%s: inet_ntop failed!\n", ifa->ifa_name);
-        }
-        else
-        {
-            printf("%s: %s\n", ifa->ifa_name, buf);
+            if (ifa->ifa_addr->sa_family == AF_INET) {
+                struct sockaddr_in *s4 = (struct sockaddr_in *) ifa->ifa_addr;
+                in_addr = &s4->sin_addr;
+                if (!inet_ntop(ifa->ifa_addr->sa_family, in_addr, buf, sizeof(buf))) {
+                    printf("%s: inet_ntop failed!\n", ifa->ifa_name);
+                } else {
+                    printf("%s: %s\n", ifa->ifa_name, buf);
+
+                    std::string str(buf, strlen(buf));
+                    return str;
+                }
+            }
         }
     }
-
-    freeifaddrs(myaddrs);
-    return 0;
+    return nullptr;
 }

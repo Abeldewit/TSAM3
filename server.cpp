@@ -25,6 +25,7 @@
 #include <sstream>
 #include <thread>
 #include <map>
+#include "ip.cpp"
 
 #include <unistd.h>
 
@@ -69,7 +70,7 @@ std::string serverID = "V_GROUP_100";
 
 std::map<int, Client*> clients; // Lookup table for per Client information
 int myPort;
-sockaddr myAddress;
+std::string myAddress;
 
 int mainClient = -1;
 
@@ -228,7 +229,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         FD_SET(o_socket, openSockets);
 
         // And update the maximum file descriptor
-        &maxfds = std::max(maxfds, &o_socket);
+        maxfds = std::max(maxfds, &o_socket);
 
         // create a new client to store information.
         clients[o_socket] = new Client(o_socket);
@@ -245,9 +246,11 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         // Our info
         msg += serverID;
         msg += ",";
-        msg += "myIp";
+        myAddress = getIp();
+        std::cout << myAddress << std::endl;
+        msg += myAddress;
         msg += ",";
-        msg += "myPort";
+        msg += std::to_string(myPort);
         msg += ";";
 
         // 1 hop servers
@@ -329,9 +332,10 @@ int main(int argc, char* argv[])
     }
 
     // Setup socket for server to listen to
-
-    listenSock = open_socket(atoi(argv[1]));
-    printf("Listening on port: %d\n", atoi(argv[1]));
+    myPort = atoi(argv[1]);
+    std::cout << myPort << std::endl;
+    listenSock = open_socket(myPort);
+    printf("Listening on port: %d\n", myPort);
 
     if(listen(listenSock, BACKLOG) < 0)
     {
@@ -385,10 +389,11 @@ int main(int argc, char* argv[])
 
                 printf("Client connected on server: %d\n", clientSock);
                 sendCommand(clientSock, "LISTSERVERS " + serverID );
+
             }
 
             // Now check for commands from clients
-            while(n-- > 0)
+            while(n > 0)
             {
                 for(auto const& pair : clients)
                 {
@@ -419,7 +424,7 @@ int main(int argc, char* argv[])
                                 sendCommand(client->sock, dropped);
                             }
                         }
-
+                        n--;
                     }
                 }
             }
