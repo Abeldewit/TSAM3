@@ -229,7 +229,7 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         FD_SET(o_socket, openSockets);
 
         // And update the maximum file descriptor
-        maxfds = std::max(maxfds, &o_socket);
+        *maxfds = std::max(*maxfds, o_socket);
 
         // create a new client to store information.
         clients[o_socket] = new Client(o_socket);
@@ -264,12 +264,16 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             msg +=elem.second->SERVPORT;
             msg += ";";
         }
-        std::cout << msg << std::endl;
+
         sendCommand(clientSocket, msg);
 
 
     } else if (tokens[0].compare("SERVERS") == 0) {
         std::cout << "Received SERVERS" << std::endl;
+        //TODO read first lines of SERVERS and connect that to clientSocket
+        // client[clientSocket].name = tokens[1];
+        // client[clientSocket].IP = tokens[2];
+        // client[clientSocket].port = tokens[3];
     }
     else {
         std::cout << "Reached else" << std::endl;
@@ -282,7 +286,7 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     std::string token;
     // Split command from client into tokens for parsing
     std::stringstream stream(buffer);
-
+    //TODO Split on comma's
     while(stream >> token) {
         tokens.push_back(token);
     }
@@ -324,6 +328,7 @@ int main(int argc, char* argv[])
     struct sockaddr_in client;
     socklen_t clientLen;
     char buffer[1025];              // buffer for reading from clients
+    std::freopen("serverLog.log", "w", stdout);
 
     if(argc != 2)
     {
