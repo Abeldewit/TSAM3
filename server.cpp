@@ -59,7 +59,7 @@ public:
 
 
 /// Global var - Added, string ServerID <-- ID our server?
-std::string serverID = "V_GROUP100";
+std::string serverID = "V_GROUP_100";
 
 
 // Note: map is not necessarily the most efficient method to use here,
@@ -90,7 +90,7 @@ int open_socket(int portno)
 #ifdef __APPLE__
     if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        perror("Failed to open socket");
+        perror("Failed to open socket\n");
         return(-1);
     }
 #else
@@ -186,34 +186,25 @@ int sendCommand(int clientSocket, std::string msg) {
 
 // When our client is logged in these commands will be active
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
-
-    if( (tokens[0].compare("GETMSG") == 0) && tokens.size() == 2) {
-        // We try to receive a message from someone
-        std::cout << "GETMSG received" << std::endl;
-
-    } else if( (tokens[0].compare("SENDMSG") == 0) && tokens.size() == 3) {
+    if( (tokens[0].compare("SENDMSG") == 0) && tokens.size() == 3) {
         // We send a message to someone
+
+//        int receiver;
+//        for(auto const& elem : clients)
+//        {
+//            if(elem.second->name == tokens[1]) {
+//                receiver = elem.second->sock;
+//                std::cout << tokens[1] << " has sock number " << receiver << std::endl;
+//            }
+//        }
+
         sendCommand(atoi(tokens[1].c_str()), tokens[2]);
-        std::cout << "SENDMSG received" << std::endl;
-
-    } else if( (tokens[0].compare("LISTSERVERS") == 0)) {
-        // We list all the servers that our own server is connected to
-
-        std::string msg;
-        for(auto const& elem : clients)
-        {
-            msg += elem.second->GROUP_ID;
-            msg +=elem.second->HOST_IP;
-            msg +=elem.second->SERVPORT;
-        }
-        sendCommand(clientSocket, msg);
-        /// sendCommand(clientSocket, msg);
 
 
-    } else if( (tokens[0].compare("CONNECT") == 0) ) {
+    } if( (tokens[0].compare("CONNECT") == 0) ) {
         // We force the server to connect to another server
-        std::cout << "CONNECT received" << std::endl;
-        sendCommand(clientSocket, "Connecting to other server...");
+        printf("CONNECT received\n");
+        sendCommand(clientSocket, "Connecting to other server...\n");
         struct sockaddr_in servaddr;
         bzero(&servaddr, sizeof(servaddr));
         servaddr.sin_family = AF_INET;
@@ -234,92 +225,30 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         } else {
             std::cout << "Connected new server to: " << o_socket << std::endl;
         }
-
-        std::string msg;
-        if (tokens.size() == 4) {
-            msg = "CONNECT ";
-            msg += tokens[3];
-        } else {
-            msg = "CONNECT V_GROUP_100";
-        }
-
-        Client *newServer = new Client(o_socket);
-        newServer->HOST_IP = tokens[1];
-        newServer->SERVPORT = tokens[2];
-        newServer->GROUP_ID = serverID;
-        clients.emplace(o_socket, newServer);
-
-        sendCommand(o_socket, msg);
-
     }
 
 }
 
 void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
-    if((tokens[0].compare("CONNECT") == 0) && (tokens.size() == 2))
-    {
-        clients[clientSocket]->name = tokens[1];
-        std::string msg = "Connected ";
-        msg += tokens[1];
-        sendCommand(clientSocket, msg);
+    for(int i = 0; i < tokens.size(); i++ ) {
+        std::cout << tokens[i] << std::endl;
     }
-    else if(tokens[0].compare("LEAVE") == 0)
-    {
-        // Close the socket, and leave the socket handling
-        // code to deal with tidying up clients etc. when
-        // select() detects the OS has torn down the connection.
+    std::cout << "-----------" << std::endl;
 
-        closeClient(clientSocket, openSockets, maxfds);
-    }
-    else if(tokens[0].compare("WHO") == 0)
-    {
-        std::cout << "Who is logged on" << std::endl;
-        std::string msg;
-
-        for(auto const& names : clients)
-        {
-            msg += names.second->name + ",";
-
-        }
-        // Reducing the msg length by 1 loses the excess "," - which
-        // granted is totally cheating.
-        sendCommand(clientSocket, msg);
-
-    }
-        // This is slightly fragile, since it's relying on the order
-        // of evaluation of the if statement.
-    else if((tokens[0].compare("MSG") == 0) && (tokens[1].compare("ALL") == 0))
+    if(tokens[0].compare("LISTSERVERS") == 0)
     {
         std::string msg;
-        for(auto i = tokens.begin()+2;i != tokens.end();i++)
-        {
-            msg += *i + " ";
-        }
+        msg = "SERVERS ";
 
-        for(auto const& pair : clients)
-        {
-            sendCommand(pair.second->sock, msg);
-        }
-    }
-    else if(tokens[0].compare("MSG") == 0)
-    {
-        for(auto const& pair : clients)
-        {
-            if(pair.second->name.compare(tokens[1]) == 0)
-            {
-                std::string msg;
-                for(auto i = tokens.begin()+2;i != tokens.end();i++)
-                {
-                    msg += *i + " ";
-                }
-                sendCommand(pair.second->sock, msg);
-            }
-        }
-    }
-    else if(tokens[0].compare("LISTSERVERS") == 0)
-    {
-        std::string msg;
+        // Our info
+        msg += serverID;
+        msg += ",";
+        msg += "myIp";
+        msg += ",";
+        msg += "myPort";
+        msg += ";";
 
+        // 1 hop servers
         for(auto const& elem : clients)
         {
 
@@ -328,39 +257,17 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             msg +=elem.second->HOST_IP;
             msg += ",";
             msg +=elem.second->SERVPORT;
+            msg += ";";
         }
+        std::cout << msg << std::endl;
         sendCommand(clientSocket, msg);
 
 
+    } else if (tokens[0].compare("SERVERS ") == 0) {
+        std::cout << "Received SERVERS" << std::endl;
     }
-    else if(tokens[0].compare("SEECLIENTS") == 0)
-    {
-
-        std::string msg;
-        socklen_t len;
-        struct sockaddr_storage addr;
-
-        len = sizeof addr;
-        char ipstr[1024];
-        //getpeername
-        getpeername(clientSocket, (struct sockaddr*)&addr, &len);
-        struct sockaddr_in *clientS = (struct sockaddr_in *)&addr;
-        int port = ntohs(clientS->sin_port);
-        inet_ntop(AF_INET, &clientS->sin_addr, ipstr, sizeof ipstr);
-        for(auto const& elem : clients)
-        {
-            elem.second->GROUP_ID = serverID;
-            elem.second->HOST_IP = ipstr;
-            elem.second->SERVPORT = port;
-
-            msg += serverID + "," + ipstr + ":" + std::to_string(port) + "\n";
-
-
-            //  send(clientSocket, msg.c_str(), msg.length(), 0);
-        }
-        sendCommand(clientSocket, msg);
-
-
+    else {
+        std::cout << "Reached else" << std::endl;
     }
 
 }
@@ -369,11 +276,11 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     std::vector<std::string> tokens;
     std::string token;
     // Split command from client into tokens for parsing
-    std::cout.flush();
     std::stringstream stream(buffer);
 
-    while(stream >> token)
+    while(stream >> token) {
         tokens.push_back(token);
+    }
 
     if((tokens[0].compare("PASS") == 0) && tokens.size() == 2) {
         if(tokens[1].compare("100!") == 0) {
@@ -386,20 +293,19 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
         }
         return;
     }
-
     if ( clientSocket == mainClient ) {
         // Do our client stuff
-        std::cout << "Client command:" << buffer;
+        std::cout << "Client command: " << buffer << "\n";
         clientCommand(clientSocket, openSockets, maxfds, tokens);
 
     } else {
         // Do server stuff
-        std::cout << "Server command:" << buffer << "\n";
+        std::cout << "Server command: " << buffer << "\n";
         serverCommand(clientSocket, openSockets, maxfds, tokens);
 
     }
 
-    std::cout.flush();
+    
 }
 
 int main(int argc, char* argv[])
@@ -445,7 +351,7 @@ int main(int argc, char* argv[])
         // Get modifiable copy of readSockets
         readSockets = exceptSockets = openSockets;
         memset(buffer, 0, sizeof(buffer));
-
+        
         // Look at sockets and see which ones have something to be read()
         int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, NULL);
 
@@ -461,8 +367,9 @@ int main(int argc, char* argv[])
             {
                 clientSock = accept(listenSock, (struct sockaddr *)&client,
                                     &clientLen);
-                std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT";
-                sendCommand(clientSock, msg);
+
+//                std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT";
+//                sendCommand(clientSock, msg);
                 // Add new client to the list of open sockets
                 FD_SET(clientSock, &openSockets);
 
@@ -476,7 +383,9 @@ int main(int argc, char* argv[])
                 n--;
 
                 printf("Client connected on server: %d\n", clientSock);
+                sendCommand(clientSock, "LISTSERVERS " + serverID );
             }
+
             // Now check for commands from clients
             while(n-- > 0)
             {
@@ -498,20 +407,19 @@ int main(int argc, char* argv[])
                             close(client->sock);
 
                             closeClient(client->sock, &openSockets, &maxfds);
-
                         }
                             // We don't check for -1 (nothing received) because select()
                             // only triggers if there is something on the socket for us.
                         else {
                             // Check if correct SOI
                             if (buffer[0] == 1) {
-                                std::cout << buffer << std::endl;
                                 int n = strlen(buffer);
                                 memmove(buffer - 1, buffer, n);
                                 buffer[n-2] = '\0';
                                 buffer[n-1] = '\0';
                                 runCommand(client->sock, &openSockets, &maxfds,
                                            buffer);
+                                
                             } else {
                                 if ( client->attempts < 3) {
                                     std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
@@ -520,6 +428,7 @@ int main(int argc, char* argv[])
                                 }
                             }
                         }
+
                     }
                 }
             }
