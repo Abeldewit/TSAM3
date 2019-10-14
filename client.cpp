@@ -134,6 +134,7 @@ int main(int argc, char* argv[])
     std::thread serverThread(listenServer, serverSocket);
 
     finished = false;
+    sendCommand(serverSocket, "SERVERS,Client,local,local");
     while(!finished)
     {
         bzero(buffer, sizeof(buffer));

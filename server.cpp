@@ -362,7 +362,6 @@ int main(int argc, char* argv[])
         tv.tv_sec = 2;
         tv.tv_usec = 0;
         int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &tv);
-
         if(n < 0)
         {
             perror("select failed - closing down\n");
@@ -431,10 +430,6 @@ int main(int argc, char* argv[])
             if( diff.count() > 60) {
                 sendCommand(elem.second->sock, "KEEPALIVE,0");
                 elem.second->timeout = now;
-            }
-            if ( elem.second->attempts > 4 ) {
-                close(elem.second->sock);
-                closeClient(elem.second->sock, &openSockets, &maxfds);
             }
         }
     }
