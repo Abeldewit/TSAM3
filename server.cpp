@@ -3,20 +3,15 @@
 //
 // Command line: ./chat_server 4000 
 //
-// Author: Jacky Mallett (jacky@ru.is)
-// scp -r TSAM3 hartmann14@skel.ru.is:/home/hir.is/hartmann14/tsam
-///130.208.243.61
+// Author: Jacky Mallett (jacky@ru.is) && Abel de Wit, Hartmann Ingvarsson
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/types.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
 #include <netdb.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <algorithm>
 #include <map>
@@ -24,7 +19,6 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
-#include <map>
 #include "ip.cpp"
 
 #include <unistd.h>
@@ -37,48 +31,33 @@
 
 #define BACKLOG  5          // Allowed length of queue of waiting connections
 
+
 // Simple class for handling connections from clients.
 //
 // Client(int socket) - socket to send/receive traffic from client.
 class Client
 {
 public:
-    int sock;              // socket of client connection
-    std::string name;      // Limit length of name of client's user
-    std::string GROUP_ID = "NoName";  // Group ID of the server
-    std::string HOST_IP = "NoIP";   // IP address of client*/
-    std::string SERVPORT = "NoPort";          // Port of the server
+    int sock;                                           // socket of client connection
+    std::string GROUP_ID = "NoName";                    // Group ID of the server
+    std::string HOST_IP = "NoIP";                       // IP address of client*/
+    std::string SERVPORT = "NoPort";                    // Port of the server
 
-    int attempts = 0;
-    //TODO use this to count how long ago you sent something to this server
-    // if this value > 60 seconds we can send a keepalive
-    std::chrono::seconds timeout;
+    std::chrono::system_clock::time_point timeout =
+            std::chrono::system_clock::now();           // Counter for KEEPALIVE
+    int attempts = 0;                                   // Counter for login attempts
 
     Client(int socket) : sock(socket){}
 
     ~Client(){}            // Virtual destructor defined for base class
 };
 
+/* Definitions */
 std::string serverID = "P3_GROUP_100";
-
-
-
-// Note: map is not necessarily the most efficient method to use here,
-// especially for a server with large numbers of simulataneous connections,
-// where performance is also expected to be an issue.
-//
-// Quite often a simple array can be used as a lookup table, 
-// (indexed on socket no.) sacrificing memory for speed.
-
 std::map<int, Client*> clients; // Lookup table for per Client information
 int myPort;
 std::string myAddress;
-
 int mainClient = -1;
-
-// Open socket for specified port.
-//
-// Returns -1 if unable to create the socket for any reason.
 
 int open_socket(int portno)
 {
@@ -135,9 +114,6 @@ int open_socket(int portno)
     }
 }
 
-// Close a client's connection, remove it from the client list, and
-// tidy up select sockets afterwards.
-
 void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
 {
     // Remove client from the clients list
@@ -164,6 +140,14 @@ void closeClient(int clientSocket, fd_set *openSockets, int *maxfds)
     FD_CLR(clientSocket, openSockets);
 }
 
+/* Loggin with timestamps */
+void logOut(std::string log) {
+    time_t current_time = time(NULL);
+    std::cout << ctime(&current_time);
+    std::cout << log << std::endl;
+}
+
+/* Sending across the network with SOI and EOI */
 int sendCommand(int clientSocket, std::string msg) {
     if(msg[msg.length()-1] == 0x0a) {
         msg.pop_back();
@@ -179,25 +163,17 @@ int sendCommand(int clientSocket, std::string msg) {
     buffer[n+1] = 4;
 
     if(send(clientSocket, buffer, sizeof(buffer), 0) > 0) {
+        clients[clientSocket]->timeout = std::chrono::system_clock::now();
         return 0;
     } else {
         return 1;
     }
+
 }
 
-// When our client is logged in these commands will be active
+/* Commands the client can issue */
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
     if( tokens[0].compare("SENDMSG") == 0) {
-        // We send a message to someone
-
-//        int receiver;
-//        for(auto const& elem : clients)
-//        {
-//            if(elem.second->name == tokens[1]) {
-//                receiver = elem.second->sock;
-//                std::cout << tokens[1] << " has sock number " << receiver << std::endl;
-//            }
-//        }
         std::string msg;
         for(int i = 2; i < tokens.size(); i++) {
             msg += tokens[i];
@@ -207,9 +183,8 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         }
         sendCommand(atoi(tokens[1].c_str()), msg);
 
-
     } if( (tokens[0].compare("CONNECT") == 0) ) {
-        // We force the server to connect to another server
+        // We make the server connect to another server
         printf("CONNECT received\n");
         sendCommand(clientSocket, "Connecting to other server...\n");
         struct sockaddr_in servaddr;
@@ -242,14 +217,14 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         // create a new client to store information.
         clients[o_socket] = new Client(o_socket);
     }
-
 }
 
+/* Commands other servers can issue */
 void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
 
+    // Respond to the LISTSERVERS with our information and the 1-hop connected servers
     if(tokens[0].compare("LISTSERVERS") == 0)
     {
-
         std::string msg;
         msg = "SERVERS,";
 
@@ -274,28 +249,29 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
                 msg += ";";
             }
         }
+        // Save the name that the other server provided
+        clients[clientSocket]->GROUP_ID = tokens[1];
         sendCommand(clientSocket, msg);
 
-
+        // When we receive the response we will save the information to the corresponding clientSocket
     } else if (tokens[0].compare("SERVERS") == 0) {
 
-        if(clients[clientSocket]->GROUP_ID == "NoName") {
+        if(clients[clientSocket]->HOST_IP == "NoIP") {
             clients[clientSocket]->GROUP_ID = tokens[1];
             clients[clientSocket]->HOST_IP = tokens[2];
             clients[clientSocket]->SERVPORT = tokens[3];
-            sendCommand(clientSocket, "LISTSERVERS," + serverID);
+            clients[clientSocket]->timeout = std::chrono::system_clock::now();
         }
     }
     else {
-        std::cout << "Reached else" << std::endl;
+        printf("Unknown command\n");
     }
-
 }
 
 void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer) {
+    // Split command from client into tokens for parsing
     std::vector<std::string> tokens;
     std::string token;
-    // Split command from client into tokens for parsing
     std::stringstream stream(buffer);
     while( getline(stream, token, ',')) {
         std::stringstream deepstream(token);
@@ -305,6 +281,7 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
         }
     }
 
+    // Our password check for issuing client commands
     if((tokens[0].compare("PASS") == 0) && tokens.size() == 2) {
         if(tokens[1].compare("100!") == 0) {
             mainClient = clientSocket;
@@ -316,16 +293,19 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
         }
         return;
     }
+
+    // Deceide whether it's a client or server command
     if ( clientSocket == mainClient ) {
-        // Do our client stuff
-        std::cout << "Client command: " << buffer << "\n" << std::endl;
+        std::cout << "Client command: " << std::endl;
+        // Log with timestamp
+        logOut(buffer);
         clientCommand(clientSocket, openSockets, maxfds, tokens);
 
     } else {
-        // Do server stuff
-        std::cout << "Server command: " << buffer << "\n" << std::endl;
+        std::cout << "Server command: " << std::endl;
+        // Log with timestamp
+        logOut(buffer);
         serverCommand(clientSocket, openSockets, maxfds, tokens);
-
     }
     bzero(buffer, strlen(buffer));
 }
@@ -378,7 +358,10 @@ int main(int argc, char* argv[])
         memset(buffer, 0, sizeof(buffer));
 
         // Look at sockets and see which ones have something to be read()
-        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, NULL);
+        struct timeval tv;
+        tv.tv_sec = 2;
+        tv.tv_usec = 0;
+        int n = select(maxfds + 1, &readSockets, NULL, &exceptSockets, &tv);
 
         if(n < 0)
         {
@@ -390,73 +373,69 @@ int main(int argc, char* argv[])
             // First, accept  any new connections to the server on the listening socket
             if(FD_ISSET(listenSock, &readSockets))
             {
-                clientSock = accept(listenSock, (struct sockaddr *)&client,
-                                    &clientLen);
-
-//                std::string msg = "Welcome to the triple digits! Please verify yourself with CONNECT";
-//                sendCommand(clientSock, msg);
+                clientSock = accept(listenSock, (struct sockaddr *)&client,&clientLen);
                 // Add new client to the list of open sockets
                 FD_SET(clientSock, &openSockets);
-
-                // And update the maximum file descriptor
                 maxfds = std::max(maxfds, clientSock);
-
-                // create a new client to store information.
                 clients[clientSock] = new Client(clientSock);
-
-                // Decrement the number of sockets waiting to be dealt with
                 n--;
 
-                printf("Client connected on server: %d\n", clientSock);
-                sendCommand(clientSock, "LISTSERVERS," + serverID );
+                std::cout << "Client connected on server: " << clientSock << std::endl;
 
             }
 
             // Now check for commands from clients
-            while(n > 0)
+            while(n-- > 0)
             {
                 for(auto const& pair : clients)
                 {
                     Client *client = pair.second;
 
                     if(FD_ISSET(client->sock, &readSockets)) {
-                        // recv() == 0 means client has closed connection
+
                         if (recv(client->sock, buffer, sizeof(buffer), MSG_DONTWAIT) == 0) {
                             printf("Client closed connection: %d", client->sock);
                             close(client->sock);
 
                             closeClient(client->sock, &openSockets, &maxfds);
-                        }
-                            // We don't check for -1 (nothing received) because select()
-                            // only triggers if there is something on the socket for us.
-                        else {
+                        } else {
                             // Check if correct SOI
                             if (buffer[0] == 1) {
                                 int n = strlen(buffer);
-                                std::cout << buffer << std::endl;
+                                //std::cout << buffer << std::endl;
                                 memmove(buffer - 1, buffer, n);
                                 buffer[n-2] = '\0';
                                 buffer[n-1] = '\0';
 
                                 runCommand(client->sock, &openSockets, &maxfds, buffer);
+
                             } else {
                                 std::string dropped = "Wrong Start Of Input (must be: 0x01)\n";
                                 sendCommand(client->sock, dropped);
                             }
                         }
-                        n--;
                     }
                 }
+
             }
         }
-        /* This is me trying to close a connection */
-//        for(auto const& pair : clients) {
-//            Client *client = pair.second;
-//            if ( client->attempts > 3 ) {
-//                close(client->sock);
-//                closeClient(client->sock, &openSockets, &maxfds);
-//            }
-//        }
-        std::cout.flush();
+        for(auto const& elem : clients) {
+            if(elem.second->GROUP_ID == "NoName") {
+                // When someone connects, reply with a LISTSERVERS
+                sendCommand(elem.second->sock, "LISTSERVERS," + serverID);
+                elem.second->attempts += 1;
+            }
+
+            std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+            std::chrono::duration<double> diff = now - elem.second->timeout;
+            if( diff.count() > 60) {
+                sendCommand(elem.second->sock, "KEEPALIVE,0");
+                elem.second->timeout = now;
+            }
+            if ( elem.second->attempts > 4 ) {
+                close(elem.second->sock);
+                closeClient(elem.second->sock, &openSockets, &maxfds);
+            }
+        }
     }
 }

@@ -1,0 +1,62 @@
+4032
+Listening on port: 4032
+Mon Oct 14 13:51:24 2019
+Client connected on server: 
+Sending: LISTSERVERS,P3_GROUP_100
+Mon Oct 14 13:51:59 2019
+Client command: 
+Mon Oct 14 13:51:59 2019
+CONNECT,skel.ru.is,4073
+CONNECT received
+Sending: Connecting to other server...
+Connected new server to: 5
+Mon Oct 14 13:51:59 2019
+Server command: 
+Mon Oct 14 13:51:59 2019
+LISTSERVERS,ORACLE
+Sending: SERVERS,P3_GROUP_100,10.3.37.77,4032;
+Mon Oct 14 13:52:39 2019
+Client command: 
+Mon Oct 14 13:52:39 2019
+Sending: SEND_MSG,P3_GROUP_100,ALL, I would like some hash
+Mon Oct 14 13:52:39 2019
+Server command: 
+Mon Oct 14 13:52:39 2019
+SEND_MSG,ORACLE,P3_GROUP_100,
+9ed39e2ea931586b6a985a6942ef573e
+Unknown commandMon Oct 14 13:53:48 2019
+Client command: 
+Mon Oct 14 13:53:48 2019
+Sending: SEND_MSG,P3,GROUP_100,ALL, Ha! Your secret message is 'state'
+Mon Oct 14 13:53:48 2019
+Server command: 
+Mon Oct 14 13:53:48 2019
+SEND_MSG,ORACLE,P3_GROUP_100,
+efb5803993a803fe4414fa2ca001a84f
+Unknown commandMon Oct 14 13:54:31 2019
+Client command: 
+Mon Oct 14 13:54:31 2019
+Sending: SEND_MSG,P3,GROUP_100,ALL, And now it is 'away'
+Mon Oct 14 13:54:31 2019
+Server command: 
+Mon Oct 14 13:54:31 2019
+SEND_MSG,ORACLE,P3_GROUP_100,
+d782c260658596f870ca9a8be79f4413
+Unknown commandMon Oct 14 13:55:01 2019
+Client command: 
+Mon Oct 14 13:55:01 2019
+Sending: SEND_MSG,P3,GROUP_100,ALL, Jubjub?
+Mon Oct 14 13:55:01 2019
+Server command: 
+Mon Oct 14 13:55:01 2019
+SEND_MSG,ORACLE,P3_GROUP_100,
+fbf5d75c76f961b895c89ed41b5b43dc
+Unknown commandMon Oct 14 13:55:33 2019
+Client command: 
+Mon Oct 14 13:55:33 2019
+Sending: SEND_MSG,P3,GROUP_100,ALL, So many different hashes
+Mon Oct 14 13:56:03 2019
+Client command: 
+Mon Oct 14 13:56:03 2019
+SENDMSG,5,KEEPALIVE,0
+Sending: KEEPALIVE,0

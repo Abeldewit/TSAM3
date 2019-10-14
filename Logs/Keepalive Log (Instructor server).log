@@ -1,0 +1,52 @@
+4032
+Listening on port: 4032
+Mon Oct 14 13:59:42 2019
+nt connected on server: 
+Sending: LISTSERVERS,P3_GROUP_100
+Mon Oct 14 13:59:57 2019
+Client command: 
+Mon Oct 14 13:59:57 2019
+CONNECT,SKEL.RU.IS,4073
+CONNECT received
+Sending: Connecting to other server...
+Connected new server to: 5
+Mon Oct 14 13:59:59 2019
+Server command: 
+Mon Oct 14 13:59:59 2019
+LISTSERVERS,ORACLE
+Sending: SERVERS,P3_GROUP_100,10.3.37.77,4032;
+Mon Oct 14 14:00:14 2019
+Client command: 
+Mon Oct 14 14:00:14 2019
+CONNECT,SKEL.RU.IS,4015
+CONNECT received
+Sending: Connecting to other server...
+Connected new server to: 7
+Mon Oct 14 14:00:14 2019
+Server command: 
+Mon Oct 14 14:00:14 2019
+LISTSERVERS,Instructor_3
+Sending: SERVERS,P3_GROUP_100,10.3.37.77,4032;
+Mon Oct 14 14:00:42 2019
+Client command: 
+Mon Oct 14 14:00:42 2019
+SENDMSG,7,LISTSERVERS,P3_GROUP_100
+Sending: LISTSERVERS,P3_GROUP_100
+Mon Oct 14 14:00:42 2019
+Server command: 
+Mon Oct 14 14:00:42 2019
+SERVERS,Instructor_3,130.208.243.61,4015;P3_GROUP_97,4079,ORACLE;P3_GROUP_100,10.3.37.77,4032;
+Mon Oct 14 14:00:52 2019
+Client command: 
+Mon Oct 14 14:00:52 2019
+SENDMSG,7,KEEPALIVE,0
+Sending: KEEPALIVE,0
+Mon Oct 14 14:00:52 2019
+Server command: 
+Mon Oct 14 14:00:52 2019
+SEND_MSG,ORACLE,P3_GROUP_100,
+
+“Commenting your code is like cleaning your bathroom — you never want to do it, but it 
+ really does create a more pleasant experience for you and your guests.”
+— Ryan Campbell 
+Unknown commandClient closed connection: 4
