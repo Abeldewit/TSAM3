@@ -31,11 +31,11 @@ To be able to send commands that are executed on and to the server, a user most 
 Finished commands: 
 ``PASS <password>``  : To be able to run server commands, and connect to the botnet, a client needs to be logged in.
 ``CONNECT <ipaddress> <portnumber>`` : Connect to server from its ip address and portnumber. 
-``SENDMSG, GROUP ID``: Send a message to the server for the GROUP ID
-`` LISTSERVERS ``    : List servers your server is connected to
+``SENDMSG, GROUP ID``: Send a message to the server for the GROUP ID.
+`` LISTSERVERS ``    : List servers your server is connected to.
 
 Unfinished commands: 
-``GETMSG, GROUP ID `` Get a single message from the server for the GROUP ID
+``GETMSG, GROUP ID `` Get a single message from the server for the GROUP ID.
 
 ### Commands on server:
 Messages between servers are executes as follows: 
@@ -47,7 +47,7 @@ Messages between servers are executes as follows:
     Servers should be specified as GROUP ID, the HOST IP,
     and PORT they will accept connections on, comma sepa-
     rated within the message, each server separated by ;
-    SERVERS,P_GROUP_100,130.208.243.61,8888;P_GROUP_2,10.2.132.12,888;
+    SERVERS,P_GROUP_100,130.208.243.61,8888;P_GROUP_2,10.2.132.12,888;.
     
     
 
@@ -73,7 +73,7 @@ eg.
 `` STATUSRESP,V GROUP 2,I 1,V GROUP4,20,V GROUP71,2``  server at the
 other end. Do not send more than once/minute.
 
-Our goals:
+### Our goals:
 1. Implement client and server as described above. All local commands to the server must be
 implemented by a separate client over the network. (4 points)
 
