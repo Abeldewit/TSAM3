@@ -30,9 +30,9 @@ To be able to send commands that are executed on and to the server, a user most 
 
 ##### Finished commands: 
 
-``PASS <password>``  : To be able to run server commands, and connect to the botnet, a client needs to be logged in.
+``PASS,<password>``  : To be able to run server commands, and connect to the botnet, a client needs to be logged in.
 
-``CONNECT <ipaddress> <portnumber>`` : Connect to server from its ip address and portnumber. 
+``CONNECT,<ipaddress>,<portnumber>`` : Connect to server from its ip address and portnumber. 
 
 ``SENDMSG, GROUP ID``: Send a message to the server for the GROUP ID.
 
