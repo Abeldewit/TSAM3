@@ -23,7 +23,7 @@ To run (on same machine):
     ./client 127.0.0.1 4100
 
 
-Commands on client:
+### Commands on client:
 
 To be able to send commands that are executed on and to the server, a user most login with the password 
 "100!"  Commands are excuted as: COMMAND,<parameter> and ar accepted as such.
@@ -37,7 +37,7 @@ Finished commands:
 Unfinished commands: 
 ``GETMSG, GROUP ID `` Get a single message from the server for the GROUP ID
 
-Commands on server:
+### Commands on server:
 Messages between servers are executes as follows: 
 <SOH><Command>,< comma separated parameters ><EOT>
 
