@@ -34,8 +34,6 @@ std::string getIp()
                 if (!inet_ntop(ifa->ifa_addr->sa_family, in_addr, buf, sizeof(buf))) {
                     printf("%s: inet_ntop failed!\n", ifa->ifa_name);
                 } else {
-                    printf("%s: %s\n", ifa->ifa_name, buf);
-
                     std::string str(buf, strlen(buf));
                     return str;
                 }

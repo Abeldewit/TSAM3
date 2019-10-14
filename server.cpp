@@ -45,11 +45,13 @@ class Client
 public:
     int sock;              // socket of client connection
     std::string name;      // Limit length of name of client's user
-    std::string GROUP_ID;  // Group ID of the server
-    std::string HOST_IP;   // IP address of client*/
-    std::string SERVPORT;          // Port of the server
+    std::string GROUP_ID = "NoName";  // Group ID of the server
+    std::string HOST_IP = "NoIP";   // IP address of client*/
+    std::string SERVPORT = "NoPort";          // Port of the server
 
     int attempts = 0;
+    //TODO use this to count how long ago you sent something to this server
+    // if this value > 60 seconds we can send a keepalive
     std::chrono::seconds timeout;
 
     Client(int socket) : sock(socket){}
@@ -57,7 +59,7 @@ public:
     ~Client(){}            // Virtual destructor defined for base class
 };
 
-std::string serverID = "V_GROUP_100";
+std::string serverID = "P3_GROUP_100";
 
 
 
@@ -166,7 +168,7 @@ int sendCommand(int clientSocket, std::string msg) {
     if(msg[msg.length()-1] == 0x0a) {
         msg.pop_back();
     }
-
+    std::cout << "Sending: " << msg << std::endl;
     int n = msg.length();
     char buffer[n+2];
     memset(buffer, 0, sizeof(buffer));
@@ -185,7 +187,7 @@ int sendCommand(int clientSocket, std::string msg) {
 
 // When our client is logged in these commands will be active
 void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
-    if( (tokens[0].compare("SENDMSG") == 0) && tokens.size() == 3) {
+    if( tokens[0].compare("SENDMSG") == 0) {
         // We send a message to someone
 
 //        int receiver;
@@ -196,8 +198,12 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 //                std::cout << tokens[1] << " has sock number " << receiver << std::endl;
 //            }
 //        }
-
-        sendCommand(atoi(tokens[1].c_str()), tokens[2]);
+        std::string msg;
+        for(int i = 2; i < sizeof(tokens); i++) {
+            msg += tokens[i];
+            msg += ",";
+        }
+        sendCommand(atoi(tokens[1].c_str()), msg);
 
 
     } if( (tokens[0].compare("CONNECT") == 0) ) {
@@ -238,16 +244,16 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 }
 
 void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vector<std::string> tokens) {
+
     if(tokens[0].compare("LISTSERVERS") == 0)
     {
         std::string msg;
-        msg = "SERVERS ";
+        msg = "SERVERS,";
 
         // Our info
         msg += serverID;
         msg += ",";
         myAddress = getIp();
-        std::cout << myAddress << std::endl;
         msg += myAddress;
         msg += ",";
         msg += std::to_string(myPort);
@@ -256,24 +262,24 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         // 1 hop servers
         for(auto const& elem : clients)
         {
-
-            msg += elem.second->GROUP_ID;
-            msg += ",";
-            msg +=elem.second->HOST_IP;
-            msg += ",";
-            msg +=elem.second->SERVPORT;
-            msg += ";";
+            if(elem.second->GROUP_ID != "NoName") {
+                msg += elem.second->GROUP_ID;
+                msg += ",";
+                msg += elem.second->HOST_IP;
+                msg += ",";
+                msg += elem.second->SERVPORT;
+                msg += ";";
+            }
         }
-
         sendCommand(clientSocket, msg);
 
 
     } else if (tokens[0].compare("SERVERS") == 0) {
         std::cout << "Received SERVERS" << std::endl;
         //TODO read first lines of SERVERS and connect that to clientSocket
-        // client[clientSocket].name = tokens[1];
-        // client[clientSocket].IP = tokens[2];
-        // client[clientSocket].port = tokens[3];
+        clients[clientSocket]->GROUP_ID = tokens[1];
+        clients[clientSocket]->HOST_IP = tokens[2];
+        clients[clientSocket]->SERVPORT = tokens[3];
     }
     else {
         std::cout << "Reached else" << std::endl;
@@ -286,8 +292,7 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     std::string token;
     // Split command from client into tokens for parsing
     std::stringstream stream(buffer);
-    //TODO Split on comma's
-    while(stream >> token) {
+    while( getline(stream, token, ',')) {
         tokens.push_back(token);
     }
 
@@ -328,7 +333,8 @@ int main(int argc, char* argv[])
     struct sockaddr_in client;
     socklen_t clientLen;
     char buffer[1025];              // buffer for reading from clients
-    std::freopen("serverLog.log", "w", stdout);
+    /* Writing to log file */
+    //std::freopen("serverLog.log", "w", stdout);
 
     if(argc != 2)
     {
@@ -393,7 +399,7 @@ int main(int argc, char* argv[])
                 n--;
 
                 printf("Client connected on server: %d\n", clientSock);
-                sendCommand(clientSock, "LISTSERVERS " + serverID );
+                sendCommand(clientSock, "LISTSERVERS," + serverID );
 
             }
 

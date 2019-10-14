@@ -44,3 +44,5 @@ CMakeLists.txt
 .idea/
 
 tsamvgroup100
+
+serverLog.log
