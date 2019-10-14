@@ -272,7 +272,9 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
     } else if ( tokens[0].compare("GET_MSG") == 0 ) {
         for(int i = 0; i < msgLog[tokens[1]].size(); i++) {
             sendCommand(clientSocket, msgLog[tokens[1]][i]);
+
         }
+        
     }
     else {
         printf("Unknown command\n");
@@ -439,7 +441,10 @@ int main(int argc, char* argv[])
             std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
             std::chrono::duration<double> diff = now - elem.second->timeout;
             if( diff.count() > 60) {
-                sendCommand(elem.second->sock, "KEEPALIVE,0");
+                int msgcount = msgLog[elem.second->GROUP_ID].size();
+                std::string msg = "KEEPALIVE,";
+                msg += msgcount;
+                sendCommand(elem.second->sock, msg);
                 elem.second->timeout = now;
             }
         }
