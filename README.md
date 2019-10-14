@@ -57,11 +57,12 @@ Messages between servers are executes as follows:
     rated within the message, each server separated by ;
     SERVERS,P_GROUP_100,130.208.243.61,8888;P_GROUP_2,10.2.132.12,888;.
     
+`` KEEPALIVE,<No. of Messages>``  Periodic message to 1-hop connected servers, indicating still
+    alive and the no. of messages waiting for the server at the
+    other end. Do not send more than once/minute.
+    
 ##### Unfinished commands:
 
-`` KEEPALIVE,<No. of Messages>``  Periodic message to 1-hop connected servers, indicating still
-alive and the no. of messages waiting for the server at the
-other end. Do not send more than once/minute.
 
 `` GET MSG,<GROUP ID>``  Get messages for the specified group. This may be for your
 own group, or another group.
