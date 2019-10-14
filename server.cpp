@@ -199,9 +199,11 @@ void clientCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 //            }
 //        }
         std::string msg;
-        for(int i = 2; i < sizeof(tokens); i++) {
+        for(int i = 2; i < tokens.size(); i++) {
             msg += tokens[i];
-            msg += ",";
+            if(i != tokens.size()-1) {
+                msg += ",";
+            }
         }
         sendCommand(atoi(tokens[1].c_str()), msg);
 
@@ -247,6 +249,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
     if(tokens[0].compare("LISTSERVERS") == 0)
     {
+
         std::string msg;
         msg = "SERVERS,";
 
@@ -275,11 +278,13 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
 
 
     } else if (tokens[0].compare("SERVERS") == 0) {
-        std::cout << "Received SERVERS" << std::endl;
-        //TODO read first lines of SERVERS and connect that to clientSocket
-        clients[clientSocket]->GROUP_ID = tokens[1];
-        clients[clientSocket]->HOST_IP = tokens[2];
-        clients[clientSocket]->SERVPORT = tokens[3];
+
+        if(clients[clientSocket]->GROUP_ID == "NoName") {
+            clients[clientSocket]->GROUP_ID = tokens[1];
+            clients[clientSocket]->HOST_IP = tokens[2];
+            clients[clientSocket]->SERVPORT = tokens[3];
+            sendCommand(clientSocket, "LISTSERVERS," + serverID);
+        }
     }
     else {
         std::cout << "Reached else" << std::endl;
@@ -293,7 +298,11 @@ void runCommand(int clientSocket, fd_set *openSockets, int *maxfds, char *buffer
     // Split command from client into tokens for parsing
     std::stringstream stream(buffer);
     while( getline(stream, token, ',')) {
-        tokens.push_back(token);
+        std::stringstream deepstream(token);
+        std::string deeptoken;
+        while ( getline(deepstream, deeptoken, ';') ) {
+            tokens.push_back(deeptoken);
+        }
     }
 
     if((tokens[0].compare("PASS") == 0) && tokens.size() == 2) {
