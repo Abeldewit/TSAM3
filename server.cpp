@@ -55,6 +55,7 @@ public:
 /* Definitions */
 std::string serverID = "P3_GROUP_100";
 std::map<int, Client*> clients; // Lookup table for per Client information
+std::map<std::string, std::vector<std::string>> msgLog;
 int myPort;
 std::string myAddress;
 int mainClient = -1;
@@ -240,7 +241,7 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         // 1 hop servers
         for(auto const& elem : clients)
         {
-            if(elem.second->GROUP_ID != "NoName") {
+            if(elem.second->GROUP_ID != "NoName" && elem.second->GROUP_ID != "Client") {
                 msg += elem.second->GROUP_ID;
                 msg += ",";
                 msg += elem.second->HOST_IP;
@@ -261,6 +262,16 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
             clients[clientSocket]->HOST_IP = tokens[2];
             clients[clientSocket]->SERVPORT = tokens[3];
             clients[clientSocket]->timeout = std::chrono::system_clock::now();
+        }
+    } else if (tokens[0].compare("SEND_MSG") == 0 ) {
+        std::string msg = "From: ";
+        msg += tokens[1];
+        msg += " : ";
+        msg += tokens[3];
+        msgLog[tokens[2]].push_back(msg);
+    } else if ( tokens[0].compare("GET_MSG") == 0 ) {
+        for(int i = 0; i < msgLog[tokens[1]].size(); i++) {
+            sendCommand(clientSocket, msgLog[tokens[1]][i]);
         }
     }
     else {
@@ -419,7 +430,7 @@ int main(int argc, char* argv[])
             }
         }
         for(auto const& elem : clients) {
-            if(elem.second->GROUP_ID == "NoName") {
+            if(elem.second->GROUP_ID == "NoName" && elem.second->attempts < 4) {
                 // When someone connects, reply with a LISTSERVERS
                 sendCommand(elem.second->sock, "LISTSERVERS," + serverID);
                 elem.second->attempts += 1;
