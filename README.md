@@ -28,20 +28,28 @@ To run (on same machine):
 To be able to send commands that are executed on and to the server, a user most login with the password 
 "100!"  Commands are excuted as: COMMAND,<parameter> and ar accepted as such.
 
-Finished commands: 
+##### Finished commands: 
+
 ``PASS <password>``  : To be able to run server commands, and connect to the botnet, a client needs to be logged in.
+
 ``CONNECT <ipaddress> <portnumber>`` : Connect to server from its ip address and portnumber. 
+
 ``SENDMSG, GROUP ID``: Send a message to the server for the GROUP ID.
+
 `` LISTSERVERS ``    : List servers your server is connected to.
 
-Unfinished commands: 
+##### Unfinished commands: 
+
 ``GETMSG, GROUP ID `` Get a single message from the server for the GROUP ID.
 
 ### Commands on server:
 Messages between servers are executes as follows: 
 <SOH><Command>,< comma separated parameters ><EOT>
 
+##### Finished commands:
+
 `` LISTSERVERS,<FROM GROUP ID> `` :  Reply with servers response (below).
+
 `` SERVERS  `` :  Provide a list of directly connected - i.e. 1-hop, servers to this server.
     The first IP address in the list should be the IP of the connected server.
     Servers should be specified as GROUP ID, the HOST IP,
@@ -49,9 +57,8 @@ Messages between servers are executes as follows:
     rated within the message, each server separated by ;
     SERVERS,P_GROUP_100,130.208.243.61,8888;P_GROUP_2,10.2.132.12,888;.
     
-    
+##### Unfinished commands:
 
-Unfinished commands:
 `` KEEPALIVE,<No. of Messages>``  Periodic message to 1-hop connected servers, indicating still
 alive and the no. of messages waiting for the server at the
 other end. Do not send more than once/minute.
@@ -74,6 +81,7 @@ eg.
 other end. Do not send more than once/minute.
 
 ### Our goals:
+
 1. Implement client and server as described above. All local commands to the server must be
 implemented by a separate client over the network. (4 points)
 
