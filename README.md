@@ -97,6 +97,13 @@ Bonus:
 • Provide a time stamped plaintext communication from the Oracle. (Time stamp should be
 when you received it. The oracle will respond to any messages addressed to it and delivered.
 It may move.)
+
 • Decode a hashed message from the oracle (1 point)
+
+By sending a SEND_MSG to the Oracle after we found it we recieved a MD5 Hash. 
+efb5803993a803fe4414fa2ca001a84f
+
+Decrypting that gives us a supersecretpassword: "away" 
+
 
 
