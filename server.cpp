@@ -268,13 +268,15 @@ void serverCommand(int clientSocket, fd_set *openSockets, int *maxfds, std::vect
         msg += tokens[1];
         msg += " : ";
         msg += tokens[3];
+        msg += "\n";
         msgLog[tokens[2]].push_back(msg);
+        sendCommand(clientSocket, "SEND_MSG," + serverID + "," + tokens[1] + ", 100 Kisses");
     } else if ( tokens[0].compare("GET_MSG") == 0 ) {
         for(int i = 0; i < msgLog[tokens[1]].size(); i++) {
             sendCommand(clientSocket, msgLog[tokens[1]][i]);
 
         }
-        
+
     }
     else {
         printf("Unknown command\n");
@@ -443,7 +445,7 @@ int main(int argc, char* argv[])
             if( diff.count() > 60) {
                 int msgcount = msgLog[elem.second->GROUP_ID].size();
                 std::string msg = "KEEPALIVE,";
-                msg += msgcount;
+                msg += std::to_string(msgcount);
                 sendCommand(elem.second->sock, msg);
                 elem.second->timeout = now;
             }
